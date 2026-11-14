@@ -1,0 +1,163 @@
+@import 'tailwindcss';
+@config '../../tailwind.config.js';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --color-primary: #346739;
+    --color-primary-dark: #264e2a;
+    --color-primary-light: #437d49;
+
+    --color-secondary: #79AE6F;
+    --color-secondary-light: #8ec084;
+    --color-secondary-dark: #639659;
+
+    --color-accent: #9FCB98;
+    --color-accent-light: #b6dba0;
+    --color-accent-dark: #82b37a;
+
+    --color-cream: #F2EDC2;
+    --color-cream-light: #FAF8E8;
+    --color-cream-dark: #E3DC9E;
+
+    --color-dark: #1F291E;
+    --color-dark-muted: #404C3F;
+
+    --color-surface: #FFFFFF;
+
+    /* Border Tokens */
+    --color-border-subtle: #263526;
+    --color-border-muted: #364636;
+    --color-night-border: rgba(255, 255, 255, 0.12);
+
+    /* Brand Semantic Tokens */
+    --color-brand-primary: #346739;
+    --color-brand-secondary: #79AE6F;
+    --color-brand-emerald: #437d49;
+    --color-brand-amber: #D97706;
+    --color-brand-danger: #EF4444;
+    --color-brand-rose: #E11D48;
+    --color-brand-indigo: #4F46E5;
+
+    /* Botanical Dark Mode Tokens */
+    --color-night-bg: #111711;
+    --color-night-surface: #182218;
+    --color-night-card: #202b20;
+
+    --font-heading: 'Hedvig Letters Serif', Georgia, serif;
+    --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-body: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom scrollbar and subtle botanical flourishes */
+html {
+    scroll-behavior: smooth;
+    font-family: var(--font-body);
+    color: var(--color-dark);
+    background-color: var(--color-cream);
+}
+
+html.dark {
+    color-scheme: dark;
+    color: #F2EDC2;
+    background-color: #111711;
+}
+
+html.dark body {
+    color: #F2EDC2;
+    background-color: #111711;
+}
+
+/* Lenis Smooth Scroll Overrides */
+html.lenis,
+html.lenis body {
+    height: auto;
+}
+
+html.lenis {
+    scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+}
+
+::selection {
+    background-color: #79AE6F;
+    color: #FFFFFF;
+}
+
+/* Organic blob & botanical shapes */
+.organic-border-1 {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+.organic-border-2 {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+}
+
+/* Page Opening & Transition Keyframes */
+@keyframes botanicalBloom {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(159, 203, 152, 0.45));
+    }
+    50% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 28px rgba(242, 237, 194, 0.75));
+    }
+}
+
+@keyframes shimmerGlow {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.animate-botanical-bloom {
+    animation: botanicalBloom 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes slowRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes floatGentle {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(2deg);
+    }
+}
+
+.animate-slow-rotate {
+    animation: slowRotate 36s linear infinite;
+}
+
+.animate-float-gentle {
+    animation: floatGentle 5s ease-in-out infinite;
+}
+
+.shimmer-progress {
+    background: linear-gradient(90deg, #79AE6F 0%, #F2EDC2 50%, #9FCB98 100%);
+    background-size: 200% 100%;
+    animation: shimmerGlow 1.8s linear infinite;
+}

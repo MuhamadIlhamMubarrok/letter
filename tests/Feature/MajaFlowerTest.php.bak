@@ -1,0 +1,821 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Admin\Product\Model\Product;
+use App\Domains\Order\Enums\OrderStatusEnum;
+use App\Domains\Order\Models\Order;
+use App\Domains\Order\Models\OrderItem;
+use App\Models\Category;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class MajaFlowerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpBuckflowTestDatabase();
+        $this->artisan('db:seed');
+    }
+
+    public function test_home_page_renders_with_editorial_hero_and_bestsellers(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertSee('maja flower');
+        $response->assertSee('Ungkapkan Cerita Lewat');
+        $response->assertSee('Lumière Series - Sunshine');
+        $response->assertSee('The Language of Flowers');
+        $response->assertSee('Bespoke Custom');
+        $response->assertSee('Instagram');
+        $response->assertSee('TikTok');
+        $response->assertSee('Facebook');
+        $response->assertSee('Threads');
+    }
+
+    public function test_catalog_page_renders_with_filters(): void
+    {
+        $response = $this->get('/katalog');
+
+        $response->assertStatus(200);
+        $response->assertSee('Katalog Rangkaian Bunga');
+        $response->assertSee('Teddy Series');
+        $response->assertSee('Lumière Series');
+        $response->assertSee('Filter Katalog');
+
+        // Test category route redirection
+        $catResponse = $this->get('/kategori/teddy-series');
+        $catResponse->assertRedirect('/katalog?category=teddy-series');
+
+        // Test catalog filter with category slug
+        $filteredResponse = $this->get('/katalog?category=teddy-series');
+        $filteredResponse->assertStatus(200);
+        $filteredResponse->assertSee('Teddy Series - Rose Big Size');
+    }
+
+    public function test_product_detail_page_shows_customization_and_whatsapp_generator(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $response = $this->get('/katalog/' . $product->slug);
+
+        $response->assertStatus(200);
+        $response->assertSee($product->name);
+        $response->assertSee('Personalisasi Buket Anda');
+        $response->assertSee('Pilihan Warna Kertas Wrapping');
+        $response->assertSee('Pesan Sekarang via WhatsApp');
+    }
+
+    public function test_order_tracking_page_renders_and_tracks_order_with_privacy_protection(): void
+    {
+        $response = $this->get('/lacak-pesanan');
+        $response->assertStatus(200);
+        $response->assertSee('Lacak Perjalanan Buket Bunga');
+        // Ensure no demo shortcut buttons exist that expose real customer orders
+        $response->assertDontSee('Coba Resi Demo:');
+
+        // Track specific Buckflow order seeded from DatabaseSeeder
+        $order = Order::where('tracking_code', 'BF-202610-0001')->firstOrFail();
+
+        $trackResponse = $this->get('/lacak-pesanan?code=' . $order->tracking_code);
+        $trackResponse->assertStatus(200);
+        $trackResponse->assertSee($order->tracking_code);
+        $trackResponse->assertSee('Quality Control & Approval Foto Buket', false);
+        $trackResponse->assertSee('Setujui Rangkaian');
+
+        // Verify privacy masking: customer personal data is masked
+        $trackResponse->assertSee($order->masked_customer_name);
+        $trackResponse->assertSee($order->masked_customer_phone);
+        $trackResponse->assertDontSee('081234567891'); // Raw phone number must NOT be visible
+        $trackResponse->assertSee('Enkripsi Privasi Aktif');
+    }
+
+    public function test_customer_can_approve_bouquet_photo(): void
+    {
+        $order = Order::where('tracking_code', 'BF-202610-0001')->firstOrFail();
+
+        $response = $this->post("/lacak-pesanan/{$order->tracking_code}/approval", [
+            'action' => 'APPROVE',
+        ]);
+
+        $response->assertRedirect('/lacak-pesanan?code=' . $order->tracking_code);
+
+        $order->refresh();
+        $this->assertEquals('APPROVED', $order->customer_approval_status);
+        $this->assertStringContainsString('Approval Customer: Disetujui', (string) $order->notes);
+    }
+
+    public function test_chatbot_endpoint_returns_intelligent_floral_response(): void
+    {
+        config(['services.gemini.key' => '']);
+        $response = $this->postJson('/api/chatbot/ask', [
+            'message' => 'Rekomendasi buket wisuda di bawah 200rb',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['reply', 'timestamp', 'is_live_ai', 'model']);
+        $this->assertStringContainsString('wisuda', strtolower($response->json('reply')));
+
+        $customResponse = $this->postJson('/api/chatbot/ask', [
+            'message' => 'Bagaimana alur pemesanan custom buket?',
+        ]);
+        $reply = strtolower($customResponse->json('reply'));
+        $this->assertTrue(
+            str_contains($reply, '7 tahap') || str_contains($reply, '7 langkah') || str_contains($reply, 'konsultasi'),
+            'Response should describe custom bouquet workflow.'
+        );
+        $this->assertTrue(
+            str_contains($reply, 'resi') || str_contains($reply, 'preview') || str_contains($reply, 'whatsapp'),
+            'Response should include monitoring or contact info.'
+        );
+
+        // Test multi-turn conversation history
+        $multiTurnResponse = $this->postJson('/api/chatbot/ask', [
+            'message' => 'Berapa harganya?',
+            'history' => [
+                ['role' => 'user', 'content' => 'Saya tertarik buket wisuda'],
+                ['role' => 'model', 'content' => 'Kami merekomendasikan Lumière Sunshine dan Teddy Series!'],
+            ],
+        ]);
+        $multiTurnResponse->assertStatus(200);
+        $this->assertNotEmpty($multiTurnResponse->json('reply'));
+
+        // Test Live Gemini API integration with Http::fake
+        config(['services.gemini.key' => 'fake-gemini-key-for-test']);
+        \Illuminate\Support\Facades\Http::fake([
+            'https://generativelanguage.googleapis.com/*' => \Illuminate\Support\Facades\Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                ['text' => 'Halo! Ini adalah jawaban interaktif langsung dari Gemini AI Maja Assistant 🌸'],
+                            ],
+                            'role' => 'model',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $geminiResponse = $this->postJson('/api/chatbot/ask', [
+            'message' => 'Halo AI, tolong buatkan puisi buket bunga',
+        ]);
+        $geminiResponse->assertStatus(200);
+        $this->assertTrue($geminiResponse->json('is_live_ai'));
+        $this->assertStringContainsString('Gemini AI Maja Assistant', $geminiResponse->json('reply'));
+    }
+
+    public function test_admin_authentication_and_dashboard_access(): void
+    {
+        // Unauthenticated access redirects to secret login URL
+        $guestResponse = $this->get('/admin/dashboard');
+        $guestResponse->assertRedirect(route('login'));
+
+        // Login as admin via secret route
+        $loginResponse = $this->post(route('admin.login.submit'), [
+            'email' => 'admin@majaflower.com',
+            'password' => 'password',
+        ]);
+        $loginResponse->assertRedirect('/admin/dashboard');
+
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+        $this->assertAuthenticatedAs($admin);
+
+        // Dashboard renders
+        $dashboardResponse = $this->actingAs($admin)->get('/admin/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertSee('Ringkasan Studio');
+        $dashboardResponse->assertSee('Pesanan Terbaru');
+    }
+
+    public function test_admin_orders_are_managed_via_buckflow_erp_integration(): void
+    {
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+
+        // 1. Internal CMS order routes are decommissioned (404)
+        $this->actingAs($admin)->get('/admin/orders')->assertStatus(404);
+        $this->actingAs($admin)->get('/admin/orders/create')->assertStatus(404);
+
+        // 2. Dashboard renders Buckflow ERP live sync section
+        $dashboardResponse = $this->actingAs($admin)->get('/admin/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertSee('Ringkasan Studio');
+        $dashboardResponse->assertSee('Buckflow ERP Sync');
+        $dashboardResponse->assertSee('Buka Buckflow ERP ↗');
+    }
+
+    public function test_language_switch_changes_locale(): void
+    {
+        $response = $this->get('/lang/en');
+        $response->assertRedirect();
+        $response->assertSessionHas('locale', 'en');
+
+        // Verify English content on homepage
+        $homeResponse = $this->withSession(['locale' => 'en'])->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Express Every Story Through');
+        $homeResponse->assertSee('Explore Design Inspirations');
+    }
+
+    public function test_seo_keywords_and_social_media_links_present(): void
+    {
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        // SEO target keywords
+        $response->assertSee('buket no 1 di maja', false);
+        $response->assertSee('maja buket', false);
+        $response->assertSee('buket maja', false);
+
+        // Social Media Channels
+        $response->assertSee('Instagram');
+        $response->assertSee('TikTok');
+        $response->assertSee('Facebook');
+        $response->assertSee('Threads');
+        $response->assertSee('@maja.flwr');
+        $response->assertSee('@maja_flowers');
+        $response->assertSee('https://www.instagram.com/maja.flwr/', false);
+        $response->assertSee('https://www.tiktok.com/@maja_flowers', false);
+        $response->assertSee('https://www.threads.com/@maja.flwr?hl=id', false);
+        $response->assertSee('https://web.facebook.com/profile.php?id=61570779759134', false);
+    }
+
+    public function test_custom_bouquet_7_steps_and_tracking_callout_present(): void
+    {
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        // 7 Steps Alur Custom Buket
+        $response->assertSee('KONSULTASI & KONSEP');
+        $response->assertSee('BUDGET & UKURAN');
+        $response->assertSee('DETAIL & REKAP');
+        $response->assertSee('DOWN PAYMENT');
+        $response->assertSee('PROSES RANGKAI & PREVIEW');
+        $response->assertSee('PELUNASAN SISA');
+        $response->assertSee('PENGIRIMAN / AMBIL');
+
+        // Check Resi Callout & Buttons
+        $response->assertSee('Status Pengerjaan Bisa Dilihat di Halaman Cek Resi Buket');
+        $response->assertSee('Cek Resi Buket Sekarang');
+
+        // Fresh flower quota limitation narrative
+        $response->assertSee('Fresh Flower Terbatas');
+    }
+
+    public function test_custom_404_not_found_page_renders_with_botanical_theme(): void
+    {
+        $response = $this->get('/halaman-yang-pasti-tidak-ada-12345');
+
+        $response->assertStatus(404);
+        $response->assertSee('Kelopak Bunga yang Anda Tuju');
+        $response->assertSee('Telah Gugur atau Belum Terpetik');
+        $response->assertSee('Kembali ke Beranda');
+        $response->assertSee('Jelajahi Katalog Buket');
+        $response->assertSee('Mencari Status Pesanan Custom?');
+    }
+
+    public function test_customer_stories_crud_and_homepage_display(): void
+    {
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+
+        // 1. View stories index
+        $indexResponse = $this->actingAs($admin)->get('/admin/stories');
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Daftar Momen Bahagia');
+
+        // 2. View create form
+        $createResponse = $this->actingAs($admin)->get('/admin/stories/create');
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('Informasi Cerita Pelanggan');
+
+        // 3. Create a new story
+        $postResponse = $this->actingAs($admin)->post('/admin/stories', [
+            'customer_name' => 'Fadhil dan Anisa',
+            'event_title' => 'Lamaran Romantis',
+            'story' => 'Buket bunganya sangat elegan, perpaduan mawar putih dan pita satin membuat momen tunangan kami semakin sakral.',
+            'rating' => 5,
+            'is_published' => 1,
+            'sort_order' => 10,
+        ]);
+        $postResponse->assertRedirect(route('admin.stories.index'));
+
+        $story = \App\Models\CustomerStory::where('customer_name', 'Fadhil dan Anisa')->first();
+        $this->assertNotNull($story);
+        $this->assertEquals('Lamaran Romantis', $story->event_title);
+        $this->assertTrue($story->is_published);
+
+        // 4. View edit form
+        $editResponse = $this->actingAs($admin)->get(route('admin.stories.edit', $story->id));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('Edit Cerita Pelanggan');
+
+        // 5. Update story
+        $updateResponse = $this->actingAs($admin)->put(route('admin.stories.update', $story->id), [
+            'customer_name' => 'Fadhil dan Anisa Bahagia',
+            'event_title' => 'Momen Lamaran Spesial',
+            'story' => 'Buket bunganya sangat elegan dan harum alami.',
+            'rating' => 5,
+            'is_published' => 1,
+            'sort_order' => 5,
+        ]);
+        $updateResponse->assertRedirect(route('admin.stories.index'));
+
+        $story->refresh();
+        $this->assertEquals('Fadhil dan Anisa Bahagia', $story->customer_name);
+
+        // 6. Verify story appears on client homepage
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Fadhil dan Anisa Bahagia');
+        $homeResponse->assertSee('Momen Lamaran Spesial');
+
+        // 7. Toggle published status
+        $toggleResponse = $this->actingAs($admin)->post(route('admin.stories.toggle', $story->id));
+        $toggleResponse->assertRedirect();
+        $story->refresh();
+        $this->assertFalse($story->is_published);
+
+        // 8. Delete story
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.stories.destroy', $story->id));
+        $deleteResponse->assertRedirect(route('admin.stories.index'));
+        $this->assertDatabaseMissing('customer_stories', ['id' => $story->id]);
+    }
+
+    public function test_fresh_flowers_vault_on_homepage_and_admin_crud(): void
+    {
+        // 1. Verify Homepage renders Fresh Flower Vault section
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('ATELIER COLD ROOM');
+        $homeResponse->assertSee('Ketersediaan Bunga Segar Hari Ini');
+        $homeResponse->assertSee('Daily Fresh Bloom Vault');
+        $homeResponse->assertSee('batch harian terbatas');
+
+        // 2. Admin access index and create form
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+        $indexResponse = $this->actingAs($admin)->get(route('admin.fresh-flowers.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Inventaris Bunga Segar');
+        $indexResponse->assertSee('Total Varian Bunga');
+
+        $createResponse = $this->actingAs($admin)->get(route('admin.fresh-flowers.create'));
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('Tambah Spesimen Bunga Segar');
+
+        // 3. Admin creates a new fresh flower specimen
+        $storeResponse = $this->actingAs($admin)->post(route('admin.fresh-flowers.store'), [
+            'name' => 'Ranunculus Peach Buttercup',
+            'botanical_name' => 'Ranunculus asiaticus',
+            'origin' => 'Holland Import',
+            'color_name' => 'Pastel Peach Glow',
+            'color_hex' => '#FDBA74',
+            'stock_stems' => 15,
+            'status' => 'ready',
+            'price_per_stem' => 40000,
+            'vase_life' => '6 - 9 Hari',
+            'aroma_note' => 'Aroma segar lembut',
+            'description' => 'Kelopak tumpuk melingkar bagai origami sutra.',
+            'is_active' => 1,
+            'sort_order' => 12,
+        ]);
+        $storeResponse->assertRedirect(route('admin.fresh-flowers.index'));
+
+        $flower = \App\Models\FreshFlower::where('name', 'Ranunculus Peach Buttercup')->first();
+        $this->assertNotNull($flower);
+        $this->assertEquals(15, $flower->stock_stems);
+        $this->assertEquals('ready', $flower->status);
+
+        // 4. Admin edits the flower
+        $editResponse = $this->actingAs($admin)->get(route('admin.fresh-flowers.edit', $flower->id));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('Edit Spesimen Bunga Segar');
+
+        $updateResponse = $this->actingAs($admin)->put(route('admin.fresh-flowers.update', $flower->id), [
+            'name' => 'Ranunculus Peach Buttercup Super',
+            'botanical_name' => 'Ranunculus asiaticus',
+            'origin' => 'Holland Import Selected',
+            'color_name' => 'Pastel Peach Glow',
+            'color_hex' => '#FDBA74',
+            'stock_stems' => 9,
+            'status' => 'limited',
+            'price_per_stem' => 42000,
+            'vase_life' => '7 - 10 Hari',
+            'aroma_note' => 'Aroma segar lembut',
+            'description' => 'Kelopak tumpuk ekstra mekar.',
+            'is_active' => 1,
+            'sort_order' => 12,
+        ]);
+        $updateResponse->assertRedirect(route('admin.fresh-flowers.index'));
+
+        $flower->refresh();
+        $this->assertEquals('Ranunculus Peach Buttercup Super', $flower->name);
+        $this->assertEquals('limited', $flower->status);
+        $this->assertEquals(9, $flower->stock_stems);
+
+        // 5. Quick inline stock update
+        $quickResponse = $this->actingAs($admin)->post(route('admin.fresh-flowers.quick-update', $flower->id), [
+            'stock_stems' => 3,
+            'status' => 'limited',
+        ]);
+        $quickResponse->assertRedirect();
+        $flower->refresh();
+        $this->assertEquals(3, $flower->stock_stems);
+
+        // 6. Toggle visibility
+        $toggleResponse = $this->actingAs($admin)->post(route('admin.fresh-flowers.toggle', $flower->id));
+        $toggleResponse->assertRedirect();
+        $flower->refresh();
+        $this->assertFalse($flower->is_active);
+
+        // 7. Delete specimen
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.fresh-flowers.destroy', $flower->id));
+        $deleteResponse->assertRedirect(route('admin.fresh-flowers.index'));
+        $this->assertDatabaseMissing('fresh_flowers', ['id' => $flower->id]);
+    }
+
+    public function test_categories_crud_and_protection(): void
+    {
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+
+        // 1. View categories index
+        $indexResponse = $this->actingAs($admin)->get(route('admin.categories.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Manajemen Kategori');
+        $indexResponse->assertSee('+ Tambah Kategori Baru');
+
+        // 2. View create form
+        $createResponse = $this->actingAs($admin)->get(route('admin.categories.create'));
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('Tambah Kategori');
+
+        // 3. Create a new category
+        $storeResponse = $this->actingAs($admin)->post(route('admin.categories.store'), [
+            'name' => 'Graduation Bloom Series',
+            'slug' => '', // test auto-slug
+            'description' => 'Koleksi buket spesial kelulusan dan wisuda.',
+        ]);
+        $storeResponse->assertRedirect(route('admin.categories.index'));
+
+        $category = \App\Models\Category::where('name', 'Graduation Bloom Series')->first();
+        $this->assertNotNull($category);
+        $this->assertEquals('graduation-bloom-series', $category->slug);
+
+        // 4. View edit form
+        $editResponse = $this->actingAs($admin)->get(route('admin.categories.edit', $category->id));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('Graduation Bloom Series');
+
+        // 5. Update category
+        $updateResponse = $this->actingAs($admin)->put(route('admin.categories.update', $category->id), [
+            'name' => 'Graduation Grand Series',
+            'slug' => 'graduation-grand-series',
+            'description' => 'Koleksi wisuda akbar penuh keceriaan.',
+        ]);
+        $updateResponse->assertRedirect(route('admin.categories.index'));
+
+        $category->refresh();
+        $this->assertEquals('Graduation Grand Series', $category->name);
+        $this->assertEquals('graduation-grand-series', $category->slug);
+
+        // 6. Test delete protection on a category with products
+        $categoryWithProducts = \App\Models\Category::has('products')->first();
+        if ($categoryWithProducts) {
+            $deleteProtectedResponse = $this->actingAs($admin)->delete(route('admin.categories.destroy', $categoryWithProducts->id));
+            $deleteProtectedResponse->assertSessionHas('error');
+            $this->assertDatabaseHas('categories', ['id' => $categoryWithProducts->id]);
+        }
+
+        // 7. Delete newly created empty category
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.categories.destroy', $category->id));
+        $deleteResponse->assertRedirect(route('admin.categories.index'));
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
+    }
+
+    public function test_admin_can_manage_site_settings_and_reflects_on_public_pages(): void
+    {
+        $admin = User::first();
+
+        // 1. View settings page
+        $response = $this->actingAs($admin)->get(route('admin.settings.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Pengaturan Konten');
+
+        // 2. Update settings
+        $updateData = [
+            'announcement_active' => '1',
+            'announcement_text' => 'FLASH SALE RAMADHAN: Diskon 25% Semua Buket Hari Ini!',
+            'announcement_link' => '/katalog',
+            'whatsapp_number' => '6289998887777',
+            'whatsapp_default_message' => 'Halo Maja Flower, saya ingin memesan buket spesial ramadhan.',
+            'operating_hours' => 'Senin - Minggu: 07.00 - 22.00 WIB (Fast Response)',
+            'address' => 'Jl. Maja Boulevard Grand No. 88, Tangerang Selatan',
+            'instagram_url' => 'https://instagram.com/majaflower.official',
+            'hero_stat_curated' => '4.850+',
+            'hero_stat_rating' => '⭐ 4.99 / 5.00',
+        ];
+
+        $putResponse = $this->actingAs($admin)->put(route('admin.settings.update'), $updateData);
+        $putResponse->assertRedirect(route('admin.settings.index'));
+        $putResponse->assertSessionHas('success');
+
+        // Verify helper
+        $this->assertEquals('FLASH SALE RAMADHAN: Diskon 25% Semua Buket Hari Ini!', setting('announcement_text'));
+        $this->assertEquals('6289998887777', setting('whatsapp_number'));
+        $this->assertEquals('4.850+', setting('hero_stat_curated'));
+
+        // 3. Verify public home page reflects the updated announcement and metrics
+        $publicHome = $this->get('/');
+        $publicHome->assertStatus(200);
+        $publicHome->assertSee('FLASH SALE RAMADHAN: Diskon 25% Semua Buket Hari Ini!');
+        $publicHome->assertSee('4.850+');
+        $publicHome->assertSee('6289998887777');
+    }
+
+    public function test_admin_can_crud_faqs_and_toggle_status_and_renders_on_home(): void
+    {
+        $admin = User::first();
+
+        // 1. List FAQs
+        $indexResponse = $this->actingAs($admin)->get(route('admin.faqs.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Tanya Jawab Pelanggan (FAQ)');
+
+        // 2. Create new FAQ
+        $createResponse = $this->actingAs($admin)->get(route('admin.faqs.create'));
+        $createResponse->assertStatus(200);
+
+        $storeResponse = $this->actingAs($admin)->post(route('admin.faqs.store'), [
+            'question' => 'Apakah bisa request warna pita dan wrapping khusus?',
+            'answer' => 'Tentu bisa! Kami menyediakan pilihan pita satin dan premium wrapping dengan banyak warna.',
+            'category' => 'Custom Request',
+            'sort_order' => 1,
+            'is_active' => '1',
+        ]);
+        $storeResponse->assertRedirect(route('admin.faqs.index'));
+
+        $faq = \App\Models\Faq::where('question', 'Apakah bisa request warna pita dan wrapping khusus?')->first();
+        $this->assertNotNull($faq);
+        $this->assertTrue($faq->is_active);
+
+        // 3. Edit FAQ
+        $editResponse = $this->actingAs($admin)->get(route('admin.faqs.edit', $faq->id));
+        $editResponse->assertStatus(200);
+
+        $updateResponse = $this->actingAs($admin)->put(route('admin.faqs.update', $faq->id), [
+            'question' => 'Apakah bisa request warna pita buket?',
+            'answer' => 'Ya, kami menyediakan puluhan opsi warna pita tanpa biaya tambahan.',
+            'category' => 'Custom Request',
+            'sort_order' => 2,
+            'is_active' => '1',
+        ]);
+        $updateResponse->assertRedirect(route('admin.faqs.index'));
+        $faq->refresh();
+        $this->assertEquals('Apakah bisa request warna pita buket?', $faq->question);
+
+        // 4. Toggle FAQ active status
+        $toggleResponse = $this->actingAs($admin)->post(route('admin.faqs.toggle', $faq->id));
+        $toggleResponse->assertSessionHas('success');
+        $faq->refresh();
+        $this->assertFalse($faq->is_active);
+
+        // Toggle back to active
+        $this->actingAs($admin)->post(route('admin.faqs.toggle', $faq->id));
+        $faq->refresh();
+        $this->assertTrue($faq->is_active);
+
+        // 5. Verify it appears on public homepage FAQ accordion
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Apakah bisa request warna pita buket?');
+
+        // 6. Delete FAQ
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.faqs.destroy', $faq->id));
+        $deleteResponse->assertRedirect(route('admin.faqs.index'));
+        $this->assertDatabaseMissing('faqs', ['id' => $faq->id]);
+    }
+
+    public function test_admin_can_crud_flower_philosophies_and_toggle_status_and_renders_on_home(): void
+    {
+        $admin = User::first();
+
+        // 1. List philosophies
+        $indexResponse = $this->actingAs($admin)->get(route('admin.philosophies.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Filosofi &amp; Makna Bunga', false);
+
+        // 2. Create new flower philosophy
+        $createResponse = $this->actingAs($admin)->get(route('admin.philosophies.create'));
+        $createResponse->assertStatus(200);
+
+        $storeResponse = $this->actingAs($admin)->post(route('admin.philosophies.store'), [
+            'flower_name' => 'Tulip Ungu',
+            'scientific_name' => 'Tulipa Gesneriana',
+            'emoji_or_icon' => '🌷',
+            'meaning' => 'Keagungan dan Kesetiaan Sejati',
+            'description' => 'Tulip ungu melambangkan keanggunan seorang bangsawan dan cinta yang penuh penghormatan.',
+            'sort_order' => 1,
+            'is_active' => '1',
+        ]);
+        $storeResponse->assertRedirect(route('admin.philosophies.index'));
+
+        $philosophy = \App\Models\FlowerPhilosophy::where('flower_name', 'Tulip Ungu')->first();
+        $this->assertNotNull($philosophy);
+        $this->assertTrue($philosophy->is_active);
+
+        // 3. Edit philosophy
+        $editResponse = $this->actingAs($admin)->get(route('admin.philosophies.edit', $philosophy->id));
+        $editResponse->assertStatus(200);
+
+        $updateResponse = $this->actingAs($admin)->put(route('admin.philosophies.update', $philosophy->id), [
+            'flower_name' => 'Royal Purple Tulip',
+            'scientific_name' => 'Tulipa Gesneriana Purpurea',
+            'emoji_or_icon' => '👑🌷',
+            'meaning' => 'Kemegahan Cinta Abadi',
+            'description' => 'Bunga bangsawan yang melambangkan keagungan rasa.',
+            'sort_order' => 1,
+            'is_active' => '1',
+        ]);
+        $updateResponse->assertRedirect(route('admin.philosophies.index'));
+        $philosophy->refresh();
+        $this->assertEquals('Royal Purple Tulip', $philosophy->flower_name);
+
+        // 4. Verify rendered on homepage
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Royal Purple Tulip');
+
+        // 5. Toggle active off and verify hidden on homepage
+        $this->actingAs($admin)->post(route('admin.philosophies.toggle', $philosophy->id));
+        $philosophy->refresh();
+        $this->assertFalse($philosophy->is_active);
+
+        $homeResponseAfterToggle = $this->get('/');
+        $homeResponseAfterToggle->assertDontSee('Royal Purple Tulip');
+
+        // 6. Delete philosophy
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.philosophies.destroy', $philosophy->id));
+        $deleteResponse->assertRedirect(route('admin.philosophies.index'));
+        $this->assertDatabaseMissing('flower_philosophies', ['id' => $philosophy->id]);
+    }
+
+    public function test_login_page_does_not_leak_default_credentials_and_has_security_indicators(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertStatus(200);
+        // Ensure no default or demo credentials are exposed in HTML
+        $response->assertDontSee('Default: admin@majaflower.com / password');
+        $response->assertDontSee('value="password"', false);
+        $response->assertDontSee('value="admin@majaflower.com"', false);
+        $response->assertSee('Sesi Terenkripsi');
+    }
+
+    public function test_login_security_rate_limits_failed_attempts_and_protects_against_enumeration(): void
+    {
+        // Failed attempt with wrong password gives generic error
+        $failResponse = $this->post(route('admin.login.submit'), [
+            'email' => 'admin@majaflower.com',
+            'password' => 'wrongpassword123',
+        ]);
+        $failResponse->assertSessionHasErrors('email');
+
+        // Non-existent account gives the same generic error
+        $unknownResponse = $this->post(route('admin.login.submit'), [
+            'email' => 'unknown_account@majaflower.com',
+            'password' => 'randompass123',
+        ]);
+        $unknownResponse->assertSessionHasErrors('email');
+    }
+
+    public function test_admin_change_password_feature(): void
+    {
+        $admin = User::where('email', 'admin@majaflower.com')->first();
+        $this->assertNotNull($admin);
+
+        // 1. Guest cannot access change password page
+        $guestResponse = $this->get(route('admin.password.edit'));
+        $guestResponse->assertRedirect(route('login'));
+
+        // 2. Admin can view change password page
+        $editResponse = $this->actingAs($admin)->get(route('admin.password.edit'));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('Ganti Kata Sandi');
+        $editResponse->assertSee('Kata Sandi Saat Ini');
+        $editResponse->assertSee('Kata Sandi Baru');
+
+        // 3. Fails when current password is wrong
+        $wrongCurrentResponse = $this->actingAs($admin)->put(route('admin.password.update'), [
+            'current_password' => 'wrong-old-password',
+            'password' => 'NewSecur3Pass!',
+            'password_confirmation' => 'NewSecur3Pass!',
+        ]);
+        $wrongCurrentResponse->assertSessionHasErrors('current_password');
+
+        // 4. Fails when new password does not meet requirements
+        $weakPassResponse = $this->actingAs($admin)->put(route('admin.password.update'), [
+            'current_password' => 'password',
+            'password' => 'short',
+            'password_confirmation' => 'short',
+        ]);
+        $weakPassResponse->assertSessionHasErrors('password');
+
+        // 5. Fails when confirmation does not match
+        $mismatchResponse = $this->actingAs($admin)->put(route('admin.password.update'), [
+            'current_password' => 'password',
+            'password' => 'NewSecur3Pass!',
+            'password_confirmation' => 'DifferentPass123!',
+        ]);
+        $mismatchResponse->assertSessionHasErrors('password');
+
+        // 6. Successfully update password
+        $successResponse = $this->actingAs($admin)->put(route('admin.password.update'), [
+            'current_password' => 'password',
+            'password' => 'MajaBloom2026!',
+            'password_confirmation' => 'MajaBloom2026!',
+        ]);
+        $successResponse->assertRedirect(route('admin.password.edit'));
+        $successResponse->assertSessionHas('success');
+
+        // 7. Verify new password works for login
+        $this->post(route('admin.logout'));
+
+        $newLoginResponse = $this->post(route('admin.login.submit'), [
+            'email' => 'admin@majaflower.com',
+            'password' => 'MajaBloom2026!',
+        ]);
+        $newLoginResponse->assertRedirect('/admin/dashboard');
+        $this->assertAuthenticatedAs($admin);
+
+        // 8. Verify old password no longer works
+        $this->post(route('admin.logout'));
+        $oldLoginResponse = $this->post(route('admin.login.submit'), [
+            'email' => 'admin@majaflower.com',
+            'password' => 'password',
+        ]);
+        $oldLoginResponse->assertSessionHasErrors('email');
+    }
+
+    public function test_home_page_highlights_lowest_price_and_event_recommendations_with_reasons(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+
+        // 1. Hero highlights starting affordable price
+        $response->assertSee('Mulai Rp 70.000');
+        $response->assertSee('Pesan via WhatsApp');
+
+        // 2. Event Recommendations section renders
+        $response->assertSee('Rekomendasi Buket untuk Momen Spesial Anda');
+        $response->assertSee('Kado Buat Pasangan &amp; Anniversary', false);
+        $response->assertSee('Wisuda &amp; Sidang Kelulusan', false);
+        $response->assertSee('Ulang Tahun &amp; Apresiasi Sahabat', false);
+        $response->assertSee('Ucapan Selamat &amp; Semangat Sukses', false);
+
+        // 3. Florist reason is displayed
+        $response->assertSee('Alasan Florist:');
+        $response->assertSee('Perpaduan kelopak mawar pink mekar dan boneka beruang');
+        $response->assertSee('Buket berdimensi besar (50 x 38 cm)');
+    }
+
+    public function test_order_tracking_supports_self_pickup_option(): void
+    {
+        $pickupOrder = Order::where('tracking_code', 'BF-202610-0004')->first();
+        $this->assertNotNull($pickupOrder);
+        $this->assertTrue($pickupOrder->isPickup());
+
+        $trackResponse = $this->get('/lacak-pesanan?code=' . $pickupOrder->tracking_code);
+        $trackResponse->assertStatus(200);
+        $trackResponse->assertSee($pickupOrder->tracking_code);
+        $trackResponse->assertSee('Ambil di Studio');
+        $trackResponse->assertSee('Lokasi Pengambilan (Studio Maja)');
+        $trackResponse->assertSee('Buket Bunga Anda Sudah Siap di Studio Maja!');
+    }
+
+    public function test_live_tracking_page_is_public_and_has_zero_admin_clutter(): void
+    {
+        $order = Order::where('tracking_code', 'BF-202610-0001')->first();
+        $this->assertNotNull($order);
+        $admin = User::first();
+        $this->assertNotNull($admin);
+
+        // Neither guests nor authenticated admins see Super Admin edit hubs on the public tracking page
+        $guestResponse = $this->get('/lacak-pesanan?code=' . $order->tracking_code);
+        $guestResponse->assertStatus(200);
+        $guestResponse->assertDontSee('Super Admin Control Hub');
+
+        $adminResponse = $this->actingAs($admin)->get('/lacak-pesanan?code=' . $order->tracking_code);
+        $adminResponse->assertStatus(200);
+        $adminResponse->assertDontSee('Super Admin Control Hub');
+    }
+}
+
+
+
+

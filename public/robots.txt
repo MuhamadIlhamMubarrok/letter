@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /portal-rahasia-florist/
+Disallow: /api/
+Allow: /
