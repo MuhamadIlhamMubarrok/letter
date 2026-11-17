@@ -92,22 +92,22 @@
     $meta = is_array($story->metadata) ? $story->metadata : [];
     
     // Couple nicknames
-    $groomNickname = $meta['groom_nickname'] ?? 'Rian';
-    $brideNickname = $meta['bride_nickname'] ?? 'Adinda';
+    $groomNickname = $story->getGroomNickname();
+    $brideNickname = $story->getBrideNickname();
 
     // Groom Details
-    $groomFullName = $meta['groom_full_name'] ?? ($story->sender_name ?: 'Rian Pratama, S.Kom.');
-    $groomParents = $meta['groom_parents'] ?? 'Putra pertama dari Bpk. Hendra Wijaya & Ibu Sinta Dewi';
+    $groomFullName = $story->getGroomFullName();
+    $groomParents = $story->getGroomParents();
     $groomInstagram = $meta['groom_instagram'] ?? '@rianpratama';
     $groomBio = $meta['groom_bio'] ?? 'Sosok penyabar dan penuh perhatian yang selalu menjadi pelindung terbaik.';
-    $groomPhoto = $meta['groom_photo'] ?? 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80';
+    $groomPhoto = $story->getGroomPhotoUrl();
 
     // Bride Details
-    $brideFullName = $meta['bride_full_name'] ?? ($story->recipient_name ?: 'Adinda Kirana, S.Ds.');
-    $brideParents = $meta['bride_parents'] ?? 'Putri kedua dari Bpk. Bambang Surya & Ibu Ratna Sari';
+    $brideFullName = $story->getBrideFullName();
+    $brideParents = $story->getBrideParents();
     $brideInstagram = $meta['bride_instagram'] ?? '@adindakrn';
     $brideBio = $meta['bride_bio'] ?? 'Sosok hangat, penuh senyuman dan energi positif yang mewarnai setiap hari.';
-    $bridePhoto = $meta['bride_photo'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+    $bridePhoto = $story->getBridePhotoUrl();
 
     // Date & Countdown Target
     $eventDate = $story->event_date ?? \Carbon\Carbon::now()->addDays(28)->setHour(9)->setMinute(0);
@@ -115,24 +115,32 @@
     $eventFormattedDate = $eventDate->translatedFormat('l, d F Y');
 
     // Ceremony (Akad)
-    $ceremonyTime = $meta['ceremony_time'] ?? '08.00 - 10.00 WIB';
-    $ceremonyVenue = $meta['ceremony_venue'] ?? 'Masjid Agung Al-Azhar';
-    $ceremonyAddress = $meta['ceremony_address'] ?? 'Jl. Sisingamangaraja No. 1, Kebayoran Baru, Jakarta Selatan';
-    $ceremonyMaps = $meta['ceremony_maps'] ?? ($meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta');
+    $ceremonyTime = $story->getCeremonyTime();
+    $ceremonyVenue = $story->getCeremonyVenue();
+    $ceremonyAddress = $story->getCeremonyAddress();
+    $ceremonyMaps = $story->getCeremonyMapsUrl();
 
     // Reception (Resepsi)
-    $receptionTime = $meta['reception_time'] ?? '11.00 - 14.00 WIB';
-    $receptionVenue = $meta['reception_venue'] ?? ($meta['venue_name'] ?? 'Grand Glasshouse Ballroom Maja');
-    $receptionAddress = $meta['reception_address'] ?? ($meta['venue_address'] ?? 'Jl. Melati Putih No. 28, Kebayoran Baru, Jakarta Selatan');
-    $receptionMaps = $meta['reception_maps'] ?? ($meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta');
+    $receptionTime = $story->getReceptionTime();
+    $receptionVenue = $story->getReceptionVenue();
+    $receptionAddress = $story->getReceptionAddress();
+    $receptionMaps = $story->getReceptionMapsUrl();
 
     // Gift Info
-    $bank1 = $meta['bank_1'] ?? ['bank' => 'BCA', 'number' => '8801234567', 'holder' => 'Rian Pratama'];
-    $bank2 = $meta['bank_2'] ?? ['bank' => 'Bank Mandiri', 'number' => '1370012345678', 'holder' => 'Adinda Kirana'];
-    $giftAddress = $meta['gift_address'] ?? [
-        'recipient' => 'Adinda & Rian (Maja Flower Studio)',
-        'phone' => '0812-3456-7890',
-        'address' => 'Jl. Melati Putih No. 28, Kebayoran Baru, Jakarta Selatan 12180'
+    $bank1 = [
+        'bank' => $meta['bank_1_name'] ?? 'BCA',
+        'number' => $meta['bank_1_number'] ?? '8801234567',
+        'holder' => $meta['bank_1_holder'] ?? 'Rian Pratama'
+    ];
+    $bank2 = [
+        'bank' => $meta['bank_2_name'] ?? 'Bank Mandiri',
+        'number' => $meta['bank_2_number'] ?? '1370012345678',
+        'holder' => $meta['bank_2_holder'] ?? 'Adinda Kirana'
+    ];
+    $giftAddress = [
+        'recipient' => $groomNickname . ' & ' . $brideNickname,
+        'phone' => $story->customer_phone ?: '0812-3456-7890',
+        'address' => $meta['gift_delivery_address'] ?? 'Jl. Melati Putih No. 28, Kebayoran Baru, Jakarta Selatan 12180'
     ];
 
     // Audio path
@@ -540,9 +548,9 @@
         <!-- ======================================================== -->
         <section
             id="cover"
-            class="fixed inset-0 z-50 max-w-[480px] mx-auto min-h-screen min-h-[100dvh] flex flex-col justify-between items-center p-5 sm:p-8 text-center select-none overflow-hidden transition-all duration-700 ease-in-out touch-none overscroll-none"
+            class="fixed inset-0 z-50 w-full min-h-screen min-h-[100dvh] flex flex-col justify-between items-center p-5 sm:p-8 text-center select-none overflow-hidden transition-all duration-700 ease-in-out touch-none overscroll-none"
             :class="{ '-translate-y-full opacity-0 pointer-events-none': coverOpened }"
-            style="background: linear-gradient(180deg, rgba(250,247,242,0.5) 0%, rgba(250,247,242,0.96) 85%), url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;"
+            style="background: linear-gradient(180deg, rgba(250,247,242,0.92) 0%, rgba(244,239,230,0.98) 100%), url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;"
         >
             <!-- Decorative Arch Outline -->
             <div class="absolute inset-3 sm:inset-4 arch-frame border border-[#8C6D46]/25 pointer-events-none"></div>

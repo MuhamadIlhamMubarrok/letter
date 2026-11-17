@@ -1,129 +1,89 @@
-# 🌸 MAJA FLOWER — Artisanal Boutique Florist Platform
+# 💌 SISTEM UNDANGAN & SURAT (Digital Story & Wedding Invitation Platform)
 
-A boutique florist web platform and company profile built with **Laravel 12**, **Tailwind CSS**, and **Alpine.js**, adhering to strict **Clean Modular Layered Architecture (Service-Repository Pattern with DTOs)**.
-
----
-
-## 🎨 Visual Identity & Design Tokens
-
-* **Primary (Deep Forest Green):** `#346739`
-* **Secondary (Earthy Sage):** `#79AE6F`
-* **Accent (Soft Celadon / Pistachio):** `#9FCB98`
-* **Cream (Warm Vanilla Background):** `#F2EDC2`
-* **Dark (High-Contrast Charcoal Text):** `#1F291E`
-* **Surface (Pure White Card Background):** `#FFFFFF`
-
-### Typography System
-* **Editorial & Heading:** `Hedvig Letters Serif`, serif (`font-heading`)
-* **Precision & Technical:** `Roboto Mono`, monospace (`font-mono`) — used for resi numbers, pricing (`Rp 350.000`), bouquet dimensions, and status codes.
-* **Body Text:** `Plus Jakarta Sans`, sans-serif (`font-body`)
+Platform CMS dan viewer interaktif berbasis web untuk **Surat Cinta Digital (Love Letter)** dan **Undangan Pernikahan Online (Wedding Invitation)** yang dibangun dengan **Laravel 12**, **Tailwind CSS**, dan **Alpine.js**.
 
 ---
 
-## 🏛️ Clean Architecture Structure
+## 🏛️ Arsitektur & Struktur Direktori
+
+Sistem ini berdiri mandiri dengan arsitektur **Domain-Driven Design (DDD)** yang modular dan terisolasi:
 
 ```
 app/
 ├── Core/
-│   ├── DTO/BaseDTO.php
-│   ├── Repository/BaseRepository.php & BaseRepositoryInterface.php
-│   ├── Service/BaseCrudService.php & BaseCrudServiceInterface.php
-│   └── Enums/OrderStatusEnum.php
-├── Admin/
-│   ├── Product/ (Controller, DTO, Request, Service, Repository, Model)
-│   ├── Order/   (Controller, DTO, Request, Service, Repository, Model)
-│   ├── Dashboard/
-│   └── Auth/
-├── Client/
-│   ├── Home/
-│   ├── Catalog/
-│   ├── OrderTracking/
-│   └── Chatbot/
-└── Services/
-    └── Ai/GeminiService.php
+│   └── Services/
+│       └── ImageOptimizer.php          # Kompresi & konversi WebP otomatis <100KB
+├── Domains/
+│   ├── Auth/                           # Otentikasi Admin, Keamanan & Ganti Sandi
+│   │   ├── Actions/
+│   │   ├── Controllers/
+│   │   ├── Enums/
+│   │   ├── Models/
+│   │   └── Requests/
+│   └── DigitalStory/                   # Mesin Inti Undangan & Surat Cinta
+│       ├── Actions/                    # Create, Update, Delete, Extend, QR Generator, RSVP
+│       ├── Controllers/                # AdminStoryController & PublicStoryController
+│       ├── Enums/                      # StoryType, DurationPlan, TemplateKey, Theme, Fulfillment
+│       ├── Models/                     # DigitalStory, StoryMedia, StoryRsvp
+│       ├── Requests/                   # Validasi Form CMS & Form Publik
+│       └── Templates/                  # StoryTemplateRegistry
+├── Http/
+│   └── Middleware/
+└── Models/
+    └── User.php                        # Backward compatibility alias ke App\Domains\Auth\Models\User
 ```
+
+---
+
+## 🗄️ Skema Database Mandiri (`db_letter`)
+
+Database projek ini sepenuhnya terpisah dari sistem toko bunga (Maja Flower / ERP), hanya mengelola tabel yang esensial:
+
+1. **`digital_stories`** — Data utama surat cinta & undangan pernikahan (slug, masa aktif, template, musik, pesan, metadata).
+2. **`story_media`** — Foto polaroid kenangan & galeri acara dengan urutan sorting (`sort_order`).
+3. **`story_rsvps`** — Kehadiran tamu (hadir/tidak hadir/ragu-ragu), jumlah tamu, dan ucapan doa restu.
+4. **`users`** — Akun staf & admin backoffice CMS.
+5. **`sessions`**, **`cache`**, **`cache_locks`**, **`jobs`**, **`job_batches`**, **`failed_jobs`**, **`password_reset_tokens`** — Tabel operasional sistem Laravel.
 
 ---
 
 ## 🚀 Fitur Unggulan
 
-1. **Editorial Asymmetric Hero & Company Profile (`/`)**
-   - Komposisi visual editorial majalah, organic curved borders, floating price pill.
-   - 4-Langkah Interaktif Pemesanan (`order-stepper`).
-   - Signature Best-sellers & WhatsApp Quick Order.
-   - Section **"Filosofi Bunga (The Language of Flowers)"**.
-   - Section **"Bespoke Custom Studio"**.
-   - Section **"Momen Bahagia (Polaroid Testimonials)"**.
-   - Interactive Botanical Google Maps & studio location.
+1. **Template Mesin Surat Cinta (Love Letter):**
+   - Animasi buka amplop interaktif (Vintage Envelope, Midnight Rose, Retro Polaroid, Minimalist Aesthetic).
+   - Pemutar audio musik romantis dengan pemotong durasi lagu (*audio trimmer*).
+   - Penghitung hari cinta (*love counter*).
+   - Galeri foto polaroid interaktif.
 
-2. **Katalog Buket Interaktif (`/katalog`)**
-   - Live filter Alpine.js: kategori, rentang harga (slider), ketersediaan stok.
-   - Search bar live untuk nama buket atau varietas bunga.
-   - Responsive grid (2 kolom mobile, 4 kolom desktop).
+2. **Template Mesin Undangan Pernikahan (Wedding Invitation):**
+   - Cover undangan personal per nama tamu (`/s/{slug}?to=Nama+Tamu`).
+   - Countdown acara pernikahan real-time.
+   - Integrasi Google Maps & Calendar.
+   - Kisah perjalanan cinta (*love journey*).
+   - Form RSVP & Buku Tamu / Doa Restu live interaktif.
+   - Tanda kasih digital / amplop digital (rekening bank & QRIS).
 
-3. **Detail Produk & Kalkulator Custom (`/katalog/{slug}`)**
-   - Gallery foto dengan thumbnail selector (Alpine.js).
-   - Spesifikasi bunga & dimensi (`font-mono`).
-   - Form kustomisasi palet wrapping (Sage Green, Earth tone, Pastel, Monochrome).
-   - Free greeting card generator.
-   - Add-on selector dengan kalkulasi total harga otomatis.
-   - Generator tautan pesanan WhatsApp rapi.
-
-4. **Live Order Tracking & Photo Approval (`/lacak-pesanan`)**
-   - Pencarian nomor resi (`MAJA-2026-XXXX`) atau nomor handphone pemesan.
-   - Visual 6-tahap status timeline.
-   - **Tahap Approval Foto Rangkaian**: Customer dapat melihat foto buket resolusi tinggi yang diunggah florist sebelum dibungkus. Terdapat tombol interaktif **"Setujui Rangkaian"** atau **"Minta Sedikit Revisi via WA"**.
-
-5. **Maja AI Floral Assistant (Floating Widget)**
-   - Floating action button bertema Forest Green & Warm Cream.
-   - Terintegrasi dengan `GeminiService` (Google Gemini API / Florist fallback knowledge base).
-   - Quick chips pertanyaan cepat seputar wisuda, ucapan maaf, dan cara merawat bunga.
-
-6. **Admin Backoffice (`/admin`)**
-   - Login terproteksi (`/login` / `/admin/login`).
-   - Ringkasan studio: Metrik produk, pesanan aktif, pesanan butuh approval foto, dan total omset.
-   - CRUD Produk lengkap dengan upload multi-gambar ke `storage/app/public`.
-   - Manajemen Pesanan: Update tahapan status & **Unggah Foto Buket (Kamera/File)** untuk live tracking pelanggan.
+3. **Backoffice CMS (`/portal-rahasia-florist` atau `/admin`):**
+   - Pipeline pemenuhan pesanan (*drafting*, *review*, *ready to print*, *completed*).
+   - Generator kartu cetak fisik siap print (A6 / kartu buket) dengan QR code SVG beresolusi tinggi.
+   - Quick WhatsApp notification & reminder perpanjangan durasi.
 
 ---
 
-## 🔑 Kredensial Akun Demo
+## ⚙️ Setup & Migrasi Database
 
-* **URL Admin Login:** `http://127.0.0.1:8000/login`
-* **Email:** `admin@majaflower.com`
-* **Password:** `password`
+```bash
+# Salin konfigurasi environment
+cp .env.example .env
 
-### Contoh Nomor Resi Demo untuk Tracking:
-* `MAJA-2026-0001` (Tahap 3: **Approval Foto Hasil Rangkaian** — Terdapat foto resolusi tinggi siap diapprove!)
-* `MAJA-2026-0002` (Tahap 5: Dalam Perjalanan Pengiriman)
-* `MAJA-2026-0003` (Tahap 6: Pesanan Telah Tiba di Lokasi)
+# Generate Application Key
+php artisan key:generate
 
----
+# Jalankan migrasi dan seeder data demo
+php artisan migrate:fresh --seed
+```
 
-## 🛠️ Cara Menjalankan Aplikasi
-
-1. **Jalankan Migration & Seed Data:**
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
-
-2. **Buat Symlink Storage:**
-   ```bash
-   php artisan storage:link
-   ```
-
-3. **Build Frontend Assets (Tailwind & Alpine):**
-   ```bash
-   npm run build
-   ```
-
-4. **Jalankan Server Lokal:**
-   ```bash
-   php artisan serve
-   ```
-   Buka browser di `http://127.0.0.1:8000`.
-
-5. **Menjalankan Test Otomatis:**
-   ```bash
-   php artisan test
-   ```
+### Kredensial Login Backoffice Demo:
+- **URL Login:** `http://127.0.0.1:8000/portal-rahasia-florist` (atau `/admin/login`)
+- **Email:** `admin@majaflower.com`
+- **Password:** `password`

@@ -24,6 +24,30 @@ class UpdateDigitalStoryRequest extends FormRequest
     }
 
     /**
+     * Prepare data before validation to streamline wedding invitations vs love letters.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('story_type') === 'wedding_invitation') {
+            $groom = $this->input('groom_nickname') ?: ($this->input('groom_full_name') ?: 'Mempelai Pria');
+            $bride = $this->input('bride_nickname') ?: ($this->input('bride_full_name') ?: 'Mempelai Wanita');
+
+            if (! $this->filled('sender_name')) {
+                $this->merge(['sender_name' => $groom]);
+            }
+            if (! $this->filled('recipient_name')) {
+                $this->merge(['recipient_name' => $bride]);
+            }
+            if (! $this->filled('title')) {
+                $this->merge(['title' => "The Wedding of {$groom} & {$bride}"]);
+            }
+            if (! $this->filled('message')) {
+                $this->merge(['message' => 'Dengan penuh rasa syukur kepada Tuhan Yang Maha Esa, kami bermaksud mengundang Bapak/Ibu/Saudara/i untuk hadir dan memberikan doa restu pada hari bahagia pernikahan kami.']);
+            }
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -54,11 +78,48 @@ class UpdateDigitalStoryRequest extends FormRequest
             'new_photos.*' => ['file', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
             'delete_photos' => ['nullable', 'array'],
             'delete_photos.*' => ['integer'],
+
+            // Wedding Mempelai Pria & Wanita
+            'groom_full_name' => ['nullable', 'string', 'max:150'],
+            'groom_nickname' => ['nullable', 'string', 'max:60'],
+            'groom_parents' => ['nullable', 'string', 'max:255'],
+            'groom_instagram' => ['nullable', 'string', 'max:100'],
+            'groom_bio' => ['nullable', 'string', 'max:500'],
+            'groom_photo' => ['nullable', 'file', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
+
+            'bride_full_name' => ['nullable', 'string', 'max:150'],
+            'bride_nickname' => ['nullable', 'string', 'max:60'],
+            'bride_parents' => ['nullable', 'string', 'max:255'],
+            'bride_instagram' => ['nullable', 'string', 'max:100'],
+            'bride_bio' => ['nullable', 'string', 'max:500'],
+            'bride_photo' => ['nullable', 'file', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
+
+            // Wedding Akad Nikah
+            'ceremony_date' => ['nullable', 'date'],
+            'wedding_ceremony_time' => ['nullable', 'string', 'max:100'],
+            'ceremony_venue_name' => ['nullable', 'string', 'max:150'],
+            'ceremony_venue_address' => ['nullable', 'string', 'max:255'],
+            'ceremony_maps_url' => ['nullable', 'url', 'max:500'],
+
+            // Wedding Resepsi
+            'reception_date' => ['nullable', 'date'],
+            'wedding_reception_time' => ['nullable', 'string', 'max:100'],
             'wedding_venue_name' => ['nullable', 'string', 'max:150'],
             'wedding_venue_address' => ['nullable', 'string', 'max:255'],
             'wedding_maps_url' => ['nullable', 'url', 'max:500'],
-            'wedding_ceremony_time' => ['nullable', 'string', 'max:50'],
-            'wedding_reception_time' => ['nullable', 'string', 'max:50'],
+
+            // Digital Gift / Amplop & Rekening
+            'bank_1_name' => ['nullable', 'string', 'max:50'],
+            'bank_1_number' => ['nullable', 'string', 'max:50'],
+            'bank_1_holder' => ['nullable', 'string', 'max:100'],
+            'bank_2_name' => ['nullable', 'string', 'max:50'],
+            'bank_2_number' => ['nullable', 'string', 'max:50'],
+            'bank_2_holder' => ['nullable', 'string', 'max:100'],
+            'gift_delivery_address' => ['nullable', 'string', 'max:300'],
+
+            // Holy Verse / Quotes
+            'holy_verse_text' => ['nullable', 'string', 'max:1000'],
+            'holy_verse_source' => ['nullable', 'string', 'max:100'],
         ];
     }
 

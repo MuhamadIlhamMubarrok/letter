@@ -622,7 +622,7 @@
             :class="{ '-translate-y-full opacity-0 pointer-events-none': envelopeOpened }"
         >
             <!-- Top Cute Header -->
-            <div class="pt-4 sm:pt-6 space-y-1">
+            <div class="{{ isset($isDemo) && $isDemo ? 'pt-16 sm:pt-20' : 'pt-4 sm:pt-6' }} space-y-1">
                 <span
                     class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[10px] font-bold tracking-widest uppercase border"
                     style="background-color: {{ $cfg['accent_soft'] }}; border-color: {{ $cfg['border_color'] }}; color: {{ $cfg['accent_primary'] }};"

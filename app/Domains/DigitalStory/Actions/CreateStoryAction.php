@@ -86,12 +86,61 @@ class CreateStoryAction
             // Structure metadata for wedding details if applicable
             $metadata = [];
             if ($storyType === StoryType::WEDDING_INVITATION) {
+                // Groom Photo processing
+                $groomPhoto = null;
+                if (isset($payload['groom_photo']) && $payload['groom_photo'] instanceof UploadedFile && $payload['groom_photo']->isValid()) {
+                    $savedPath = $this->imageOptimizer->optimizeAndStore($payload['groom_photo'], 'stories/couples');
+                    $groomPhoto = 'storage/' . $savedPath;
+                } elseif (! empty($payload['groom_photo_url'])) {
+                    $groomPhoto = (string) $payload['groom_photo_url'];
+                }
+
+                // Bride Photo processing
+                $bridePhoto = null;
+                if (isset($payload['bride_photo']) && $payload['bride_photo'] instanceof UploadedFile && $payload['bride_photo']->isValid()) {
+                    $savedPath = $this->imageOptimizer->optimizeAndStore($payload['bride_photo'], 'stories/couples');
+                    $bridePhoto = 'storage/' . $savedPath;
+                } elseif (! empty($payload['bride_photo_url'])) {
+                    $bridePhoto = (string) $payload['bride_photo_url'];
+                }
+
                 $metadata = [
+                    'groom_full_name' => $payload['groom_full_name'] ?? null,
+                    'groom_nickname' => $payload['groom_nickname'] ?? null,
+                    'groom_parents' => $payload['groom_parents'] ?? null,
+                    'groom_instagram' => $payload['groom_instagram'] ?? null,
+                    'groom_bio' => $payload['groom_bio'] ?? null,
+                    'groom_photo' => $groomPhoto,
+
+                    'bride_full_name' => $payload['bride_full_name'] ?? null,
+                    'bride_nickname' => $payload['bride_nickname'] ?? null,
+                    'bride_parents' => $payload['bride_parents'] ?? null,
+                    'bride_instagram' => $payload['bride_instagram'] ?? null,
+                    'bride_bio' => $payload['bride_bio'] ?? null,
+                    'bride_photo' => $bridePhoto,
+
+                    'ceremony_date' => $payload['ceremony_date'] ?? null,
+                    'ceremony_time' => $payload['wedding_ceremony_time'] ?? null,
+                    'ceremony_venue' => $payload['ceremony_venue_name'] ?? null,
+                    'ceremony_venue_address' => $payload['ceremony_venue_address'] ?? null,
+                    'ceremony_maps_url' => $payload['ceremony_maps_url'] ?? null,
+
+                    'reception_date' => $payload['reception_date'] ?? null,
+                    'reception_time' => $payload['wedding_reception_time'] ?? null,
                     'venue_name' => $payload['wedding_venue_name'] ?? null,
                     'venue_address' => $payload['wedding_venue_address'] ?? null,
                     'maps_url' => $payload['wedding_maps_url'] ?? null,
-                    'ceremony_time' => $payload['wedding_ceremony_time'] ?? null,
-                    'reception_time' => $payload['wedding_reception_time'] ?? null,
+
+                    'bank_1_name' => $payload['bank_1_name'] ?? null,
+                    'bank_1_number' => $payload['bank_1_number'] ?? null,
+                    'bank_1_holder' => $payload['bank_1_holder'] ?? null,
+                    'bank_2_name' => $payload['bank_2_name'] ?? null,
+                    'bank_2_number' => $payload['bank_2_number'] ?? null,
+                    'bank_2_holder' => $payload['bank_2_holder'] ?? null,
+                    'gift_delivery_address' => $payload['gift_delivery_address'] ?? null,
+
+                    'holy_verse_text' => $payload['holy_verse_text'] ?? null,
+                    'holy_verse_source' => $payload['holy_verse_source'] ?? null,
                 ];
             }
 

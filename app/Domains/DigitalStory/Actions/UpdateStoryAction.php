@@ -130,11 +130,56 @@ class UpdateStoryAction
             // Metadata update
             $metadata = is_array($story->metadata) ? $story->metadata : [];
             if ($story->story_type === StoryType::WEDDING_INVITATION) {
+                // Groom Photo processing
+                if (isset($payload['groom_photo']) && $payload['groom_photo'] instanceof UploadedFile && $payload['groom_photo']->isValid()) {
+                    $savedPath = $this->imageOptimizer->optimizeAndStore($payload['groom_photo'], 'stories/couples');
+                    $metadata['groom_photo'] = 'storage/' . $savedPath;
+                } elseif (! empty($payload['groom_photo_url'])) {
+                    $metadata['groom_photo'] = (string) $payload['groom_photo_url'];
+                }
+
+                // Bride Photo processing
+                if (isset($payload['bride_photo']) && $payload['bride_photo'] instanceof UploadedFile && $payload['bride_photo']->isValid()) {
+                    $savedPath = $this->imageOptimizer->optimizeAndStore($payload['bride_photo'], 'stories/couples');
+                    $metadata['bride_photo'] = 'storage/' . $savedPath;
+                } elseif (! empty($payload['bride_photo_url'])) {
+                    $metadata['bride_photo'] = (string) $payload['bride_photo_url'];
+                }
+
+                $metadata['groom_full_name'] = $payload['groom_full_name'] ?? ($metadata['groom_full_name'] ?? null);
+                $metadata['groom_nickname'] = $payload['groom_nickname'] ?? ($metadata['groom_nickname'] ?? null);
+                $metadata['groom_parents'] = $payload['groom_parents'] ?? ($metadata['groom_parents'] ?? null);
+                $metadata['groom_instagram'] = $payload['groom_instagram'] ?? ($metadata['groom_instagram'] ?? null);
+                $metadata['groom_bio'] = $payload['groom_bio'] ?? ($metadata['groom_bio'] ?? null);
+
+                $metadata['bride_full_name'] = $payload['bride_full_name'] ?? ($metadata['bride_full_name'] ?? null);
+                $metadata['bride_nickname'] = $payload['bride_nickname'] ?? ($metadata['bride_nickname'] ?? null);
+                $metadata['bride_parents'] = $payload['bride_parents'] ?? ($metadata['bride_parents'] ?? null);
+                $metadata['bride_instagram'] = $payload['bride_instagram'] ?? ($metadata['bride_instagram'] ?? null);
+                $metadata['bride_bio'] = $payload['bride_bio'] ?? ($metadata['bride_bio'] ?? null);
+
+                $metadata['ceremony_date'] = $payload['ceremony_date'] ?? ($metadata['ceremony_date'] ?? null);
+                $metadata['ceremony_time'] = $payload['wedding_ceremony_time'] ?? ($metadata['ceremony_time'] ?? null);
+                $metadata['ceremony_venue'] = $payload['ceremony_venue_name'] ?? ($metadata['ceremony_venue'] ?? null);
+                $metadata['ceremony_venue_address'] = $payload['ceremony_venue_address'] ?? ($metadata['ceremony_venue_address'] ?? null);
+                $metadata['ceremony_maps_url'] = $payload['ceremony_maps_url'] ?? ($metadata['ceremony_maps_url'] ?? null);
+
+                $metadata['reception_date'] = $payload['reception_date'] ?? ($metadata['reception_date'] ?? null);
+                $metadata['reception_time'] = $payload['wedding_reception_time'] ?? ($metadata['reception_time'] ?? null);
                 $metadata['venue_name'] = $payload['wedding_venue_name'] ?? ($metadata['venue_name'] ?? null);
                 $metadata['venue_address'] = $payload['wedding_venue_address'] ?? ($metadata['venue_address'] ?? null);
                 $metadata['maps_url'] = $payload['wedding_maps_url'] ?? ($metadata['maps_url'] ?? null);
-                $metadata['ceremony_time'] = $payload['wedding_ceremony_time'] ?? ($metadata['ceremony_time'] ?? null);
-                $metadata['reception_time'] = $payload['wedding_reception_time'] ?? ($metadata['reception_time'] ?? null);
+
+                $metadata['bank_1_name'] = $payload['bank_1_name'] ?? ($metadata['bank_1_name'] ?? null);
+                $metadata['bank_1_number'] = $payload['bank_1_number'] ?? ($metadata['bank_1_number'] ?? null);
+                $metadata['bank_1_holder'] = $payload['bank_1_holder'] ?? ($metadata['bank_1_holder'] ?? null);
+                $metadata['bank_2_name'] = $payload['bank_2_name'] ?? ($metadata['bank_2_name'] ?? null);
+                $metadata['bank_2_number'] = $payload['bank_2_number'] ?? ($metadata['bank_2_number'] ?? null);
+                $metadata['bank_2_holder'] = $payload['bank_2_holder'] ?? ($metadata['bank_2_holder'] ?? null);
+                $metadata['gift_delivery_address'] = $payload['gift_delivery_address'] ?? ($metadata['gift_delivery_address'] ?? null);
+
+                $metadata['holy_verse_text'] = $payload['holy_verse_text'] ?? ($metadata['holy_verse_text'] ?? null);
+                $metadata['holy_verse_source'] = $payload['holy_verse_source'] ?? ($metadata['holy_verse_source'] ?? null);
             }
 
             if (array_key_exists('audio_start_sec', $payload)) {

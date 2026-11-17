@@ -80,42 +80,48 @@
 
     $meta = is_array($story->metadata) ? $story->metadata : [];
 
-    $groomNickname = $meta['groom_nickname'] ?? 'Leonardo';
-    $brideNickname = $meta['bride_nickname'] ?? 'Kimberly';
+    $groomNickname = $story->getGroomNickname();
+    $brideNickname = $story->getBrideNickname();
 
-    $groomFullName = $meta['groom_full_name'] ?? ($story->sender_name ?: 'Leonardo Adisurya, B.B.A.');
-    $groomParents = $meta['groom_parents'] ?? 'Putra pertama dari Bpk. William Adisurya & Ibu Jessica Widjaja';
+    $groomFullName = $story->getGroomFullName();
+    $groomParents = $story->getGroomParents();
     $groomInstagram = $meta['groom_instagram'] ?? '@leonardo.adisurya';
     $groomBio = $meta['groom_bio'] ?? 'Visionary leader, world traveler, and fiercely devoted to Kimberly.';
-    $groomPhoto = $meta['groom_photo'] ?? 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80';
+    $groomPhoto = $story->getGroomPhotoUrl();
 
-    $brideFullName = $meta['bride_full_name'] ?? ($story->recipient_name ?: 'Kimberly Anastasia, B.Des.');
-    $brideParents = $meta['bride_parents'] ?? 'Putri tunggal dari Bpk. Alexander Tan & Ibu Michelle Kusuma';
+    $brideFullName = $story->getBrideFullName();
+    $brideParents = $story->getBrideParents();
     $brideInstagram = $meta['bride_instagram'] ?? '@kimberly.anastasia';
     $brideBio = $meta['bride_bio'] ?? 'Art director, graceful soul, and the golden light of Leonardo’s universe.';
-    $bridePhoto = $meta['bride_photo'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+    $bridePhoto = $story->getBridePhotoUrl();
 
     $eventDate = $story->event_date ?? \Carbon\Carbon::now()->addDays(28)->setHour(9)->setMinute(0);
     $eventDateIso = $eventDate->toIso8601String();
     $eventFormattedDate = $eventDate->translatedFormat('l, d F Y');
 
-    $ceremonyTime = $meta['ceremony_time'] ?? '09.00 - 11.00 WIB';
-    $ceremonyVenue = $meta['venue_name'] ?? 'The Emerald Grand Ballroom & Glasshouse Maja';
-    $ceremonyAddress = $meta['venue_address'] ?? 'Jl. Jenderal Sudirman Kav. 52-53, SCBD, Jakarta Selatan';
+    $ceremonyTime = $story->getCeremonyTime();
+    $ceremonyVenue = $story->getCeremonyVenue();
+    $ceremonyAddress = $story->getCeremonyAddress();
+    $ceremonyMapsUrl = $story->getCeremonyMapsUrl();
 
-    $receptionTime = $meta['reception_time'] ?? '18.30 - 22.00 WIB';
-    $receptionVenue = $meta['venue_name'] ?? 'The Emerald Grand Ballroom & Glasshouse Maja';
-    $receptionAddress = $meta['venue_address'] ?? 'Jl. Jenderal Sudirman Kav. 52-53, SCBD, Jakarta Selatan';
-
-    $mapsUrl = $meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta';
+    $receptionTime = $story->getReceptionTime();
+    $receptionVenue = $story->getReceptionVenue();
+    $receptionAddress = $story->getReceptionAddress();
+    $receptionMapsUrl = $story->getReceptionMapsUrl();
 
     $audioTrack = $story->audio_url ?: ($story->audio_path ?: 'https://assets.mixkit.co/music/preview/mixkit-wedding-acoustic-guitar-384.mp3');
     $audioTitle = $story->audio_title ?: 'Grand Nocturne in Gold (Royal Piano)';
 
-    $bcaNumber = $meta['bank_bca_number'] ?? '8020 8899 00';
-    $bcaHolder = $meta['bank_bca_holder'] ?? 'Leonardo Adisurya';
-    $mandiriNumber = $meta['bank_mandiri_number'] ?? '137 00 9988 776';
-    $mandiriHolder = $meta['bank_mandiri_holder'] ?? 'Kimberly Anastasia';
+    $bcaName = $meta['bank_1_name'] ?? 'BCA';
+    $bcaNumber = $meta['bank_1_number'] ?? ($meta['bank_bca_number'] ?? '8020 8899 00');
+    $bcaHolder = $meta['bank_1_holder'] ?? ($meta['bank_bca_holder'] ?? 'Leonardo Adisurya');
+
+    $mandiriName = $meta['bank_2_name'] ?? 'Mandiri';
+    $mandiriNumber = $meta['bank_2_number'] ?? ($meta['bank_mandiri_number'] ?? '137 00 9988 776');
+    $mandiriHolder = $meta['bank_2_holder'] ?? ($meta['bank_mandiri_holder'] ?? 'Kimberly Anastasia');
+
+    $holyVerse = $meta['holy_verse_text'] ?? 'Two souls with but a single thought, two hearts that beat as one. A sacred covenant sealed in eternity.';
+    $holyVerseSource = $meta['holy_verse_source'] ?? '— Royal Wedding Creed —';
 @endphp
 
 <body
@@ -153,66 +159,71 @@
     </div>
 
     {{-- ======================================================== --}}
-    {{-- 1. FULLSCREEN OPENING COVER (Midnight Emerald & Gold)   --}}
+    {{-- 1. FULLSCREEN OPENING COVER (Full Edge-to-Edge, No Photo) --}}
     {{-- ======================================================== --}}
     <section
         x-ref="coverSection"
         x-show="isCoverVisible"
-        x-transition:leave="transition-all duration-1000 ease-in-out"
+        x-transition:leave="transition-all duration-700 ease-in-out transform"
         x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-full"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#040A07] via-[#091510] to-[#040A07]"
+        x-transition:leave-end="opacity-0 -translate-y-full pointer-events-none"
+        class="fixed inset-0 z-50 w-full min-h-screen min-h-[100dvh] h-full flex flex-col justify-between items-center text-center p-6 bg-gradient-to-b from-[#040A07] via-[#091510] to-[#040A07] overflow-hidden select-none"
     >
-        <div class="w-full max-w-[440px] bg-[#091510]/90 backdrop-blur-xl rounded-[32px] border border-[#D4AF37]/50 p-7 text-center shadow-2xl relative overflow-hidden">
-            {{-- Ambient gold aura --}}
-            <div class="absolute -top-12 -left-12 w-48 h-48 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-12 -right-12 w-48 h-48 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none"></div>
+        {{-- Ambient gold aura --}}
+        <div class="absolute -top-12 -left-12 w-64 h-64 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-12 -right-12 w-64 h-64 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none"></div>
 
-            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] font-royal text-[10px] uppercase tracking-widest mb-4">
+        {{-- Top Badge --}}
+        <div class="relative z-10 {{ isset($isDemo) && $isDemo ? 'pt-16 sm:pt-20' : 'pt-4 sm:pt-6' }}">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] font-royal text-[10px] uppercase tracking-widest shadow-sm">
                 <span>✨</span>
                 <span>The Royal Celebration</span>
                 <span>✨</span>
             </div>
+        </div>
 
-            <h1 class="font-royal text-4xl sm:text-5xl text-[#F5D77F] leading-tight tracking-wider mb-1">
+        {{-- Couple Names (Centered, Royal Typography) --}}
+        <div class="relative z-10 my-auto py-6 space-y-2 max-w-sm w-full">
+            <div class="w-16 h-16 mx-auto rounded-full bg-[#13221B] border border-[#D4AF37] shadow-lg flex items-center justify-center text-2xl text-[#F5D77F] mb-2 font-serif font-bold">
+                👑
+            </div>
+            <h1 class="font-royal text-4xl sm:text-5xl text-[#F5D77F] leading-tight tracking-wider">
                 {{ $groomNickname }} & {{ $brideNickname }}
             </h1>
-            <p class="font-royal text-[10px] text-[#A3B899] uppercase tracking-widest font-semibold mb-6">
+            <p class="font-royal text-[10px] text-[#A3B899] uppercase tracking-widest font-semibold">
                 A Union of Love & Eternity
             </p>
+            <p class="font-royal text-xs text-[#D4AF37] tracking-wider italic">
+                {{ $eventFormattedDate }}
+            </p>
+        </div>
 
-            {{-- Architectural Arch Photo Frame with Gold Rim --}}
-            <div class="relative w-44 h-56 mx-auto mb-6">
-                <div class="w-full h-full rounded-t-full overflow-hidden border-2 border-[#D4AF37] shadow-xl p-1 bg-[#13221B]">
-                    <img src="{{ $groomPhoto }}" alt="Mempelai" class="w-full h-full object-cover rounded-t-full">
-                </div>
-                <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#091510] border border-[#D4AF37] text-[#D4AF37] font-royal text-[10px] tracking-widest font-bold shadow-lg">
-                    EST. 2026
-                </div>
-            </div>
-
-            {{-- Guest Name Box --}}
-            <div class="bg-[#13221B]/90 border border-[#D4AF37]/35 rounded-2xl p-4 mb-6 backdrop-blur-md">
+        {{-- Personal VIP Guest Box & Buka Undangan Button (NO PHOTO as requested) --}}
+        <div class="relative z-10 w-full max-w-sm pb-6 sm:pb-8 space-y-3.5">
+            <div class="bg-[#13221B]/95 border border-[#D4AF37]/50 rounded-2xl p-4 shadow-xl backdrop-blur-md">
                 <p class="font-royal text-[10px] text-[#A3B899] uppercase tracking-widest mb-1">
                     Cordially Invited VIP Guest:
                 </p>
-                <p class="font-serif-luxury text-lg font-bold text-[#F5D77F] tracking-wide truncate">
+                <p class="font-serif-luxury text-lg sm:text-xl font-bold text-[#F5D77F] tracking-wide truncate">
                     {{ $displayGuest }}
                 </p>
+                <span class="font-royal text-[10px] text-[#D4AF37] block mt-0.5 tracking-wider">
+                    at the Grand Event
+                </span>
             </div>
 
             {{-- Buka Undangan Button (Luxury Gold Button) --}}
             <button
                 type="button"
                 @click="openInvitation()"
-                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F5D77F] to-[#D4AF37] text-[#091510] font-royal text-xs font-bold uppercase tracking-widest shadow-xl shadow-[#D4AF37]/20 hover:scale-102 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F5D77F] to-[#D4AF37] text-[#091510] font-royal text-xs font-bold uppercase tracking-widest shadow-xl shadow-[#D4AF37]/25 hover:scale-102 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
                 <span class="text-sm">✨</span>
                 <span>Open Royal Invitation</span>
                 <span class="text-xs">✦</span>
             </button>
 
-            <p class="font-royal text-[10px] text-[#A3B899] mt-3 tracking-wider">
+            <p class="font-royal text-[10px] text-[#A3B899] tracking-wider">
                 *Tap to open the grand celebration and play symphony
             </p>
         </div>
@@ -224,6 +235,7 @@
     <main
         id="mainContainer"
         class="max-w-[480px] mx-auto min-h-screen bg-[#091510] {{ request()->has('embed') ? '' : 'shadow-2xl border-x border-[#D4AF37]/25' }} relative overflow-hidden pb-24"
+        :class="{ 'h-screen max-h-screen overflow-hidden pointer-events-none': isCoverVisible }"
     >
         {{-- FLOATING MUSIC BUTTON (Gold Vinyl) --}}
         <div

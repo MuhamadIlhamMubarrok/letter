@@ -305,18 +305,126 @@ class DigitalStory extends Model
     /**
      * Wedding details from metadata.
      *
-     * @return array{
-     *     venue_name?: string,
-     *     venue_address?: string,
-     *     maps_url?: string,
-     *     ceremony_time?: string,
-     *     reception_time?: string,
-     *     wedding_countdown_target?: string
-     * }
+     * @return array<string, mixed>
      */
     public function getWeddingDetailsAttribute(): array
     {
         return is_array($this->metadata) ? $this->metadata : [];
+    }
+
+    /**
+     * Get Groom Photo URL with graceful fallback.
+     */
+    public function getGroomPhotoUrl(): string
+    {
+        $meta = $this->wedding_details;
+        if (! empty($meta['groom_photo'])) {
+            $path = (string) $meta['groom_photo'];
+            return str_starts_with($path, 'http') ? $path : asset($path);
+        }
+
+        return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+    }
+
+    /**
+     * Get Bride Photo URL with graceful fallback.
+     */
+    public function getBridePhotoUrl(): string
+    {
+        $meta = $this->wedding_details;
+        if (! empty($meta['bride_photo'])) {
+            $path = (string) $meta['bride_photo'];
+            return str_starts_with($path, 'http') ? $path : asset($path);
+        }
+
+        return 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80';
+    }
+
+    /**
+     * Helper getters for couple details in wedding templates.
+     */
+    public function getGroomNickname(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['groom_nickname']) ? (string) $meta['groom_nickname'] : ($this->sender_name ?: 'Daffa');
+    }
+
+    public function getBrideNickname(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['bride_nickname']) ? (string) $meta['bride_nickname'] : ($this->recipient_name ?: 'Caca');
+    }
+
+    public function getGroomFullName(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['groom_full_name']) ? (string) $meta['groom_full_name'] : ($this->sender_name ?: 'Daffa Ramadhan, S.T.');
+    }
+
+    public function getBrideFullName(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['bride_full_name']) ? (string) $meta['bride_full_name'] : ($this->recipient_name ?: 'Clarissa Putri, S.I.Kom.');
+    }
+
+    public function getGroomParents(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['groom_parents']) ? (string) $meta['groom_parents'] : 'Putra dari Bpk. Bambang Tri & Ibu Nurhayati';
+    }
+
+    public function getBrideParents(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['bride_parents']) ? (string) $meta['bride_parents'] : 'Putri dari Bpk. Rudi Hartono & Ibu Dewi Anggraeni';
+    }
+
+    public function getCeremonyTime(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['ceremony_time']) ? (string) $meta['ceremony_time'] : '08.00 - 10.00 WIB';
+    }
+
+    public function getReceptionTime(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['reception_time']) ? (string) $meta['reception_time'] : '11.00 - 14.00 WIB';
+    }
+
+    public function getCeremonyVenue(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['ceremony_venue']) ? (string) $meta['ceremony_venue'] : ($meta['venue_name'] ?? 'Grand Glasshouse Ballroom Maja');
+    }
+
+    public function getReceptionVenue(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['venue_name']) ? (string) $meta['venue_name'] : 'Grand Glasshouse Ballroom Maja';
+    }
+
+    public function getCeremonyAddress(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['ceremony_venue_address']) ? (string) $meta['ceremony_venue_address'] : ($meta['venue_address'] ?? 'Jl. Anggrek Ceria No. 12, Kebayoran Baru, Jakarta Selatan');
+    }
+
+    public function getReceptionAddress(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['venue_address']) ? (string) $meta['venue_address'] : 'Jl. Anggrek Ceria No. 12, Kebayoran Baru, Jakarta Selatan';
+    }
+
+    public function getCeremonyMapsUrl(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['ceremony_maps_url']) ? (string) $meta['ceremony_maps_url'] : ($meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta');
+    }
+
+    public function getReceptionMapsUrl(): string
+    {
+        $meta = $this->wedding_details;
+        return ! empty($meta['maps_url']) ? (string) $meta['maps_url'] : 'https://maps.google.com/?q=Jakarta';
     }
 
     /**

@@ -17,7 +17,7 @@ use App\Domains\DigitalStory\Models\DigitalStory;
 use App\Domains\DigitalStory\Models\StoryMedia;
 use App\Domains\DigitalStory\Models\StoryRsvp;
 use App\Domains\DigitalStory\Templates\StoryTemplateRegistry;
-use App\Models\User;
+use App\Domains\Auth\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -327,27 +327,60 @@ class DigitalStoryTest extends TestCase
     }
 
     /**
-     * Test wedding invitation creation with full metadata.
+     * Test wedding invitation creation with full metadata (photos, banks, ceremony, reception).
      */
     public function test_wedding_invitation_creation_with_metadata(): void
     {
         $action = app(CreateStoryAction::class);
+
+        $groomPhoto = UploadedFile::fake()->image('groom.jpg', 600, 600);
+        $bridePhoto = UploadedFile::fake()->image('bride.jpg', 600, 600);
 
         $story = $action->execute(
             payload: [
                 'story_type' => StoryType::WEDDING_INVITATION,
                 'duration_plan' => StoryDurationPlan::LIFETIME,
                 'theme' => StoryTemplateTheme::CLASSIC_GOLD,
-                'title' => 'The Wedding of Dinda & Rian',
-                'sender_name' => 'Dinda & Rian',
+                'title' => 'The Wedding of Daffa & Caca',
+                'sender_name' => 'Daffa & Caca',
                 'recipient_name' => 'Bapak/Ibu Tamu Undangan',
                 'message' => 'Dengan memohon rahmat Allah SWT...',
                 'event_date' => '2026-12-25 09:00:00',
+
+                // Groom & Bride details
+                'groom_full_name' => 'Daffa Ramadhan, S.T.',
+                'groom_nickname' => 'Daffa',
+                'groom_parents' => 'Putra bungsu Bpk. Bambang & Ibu Nur',
+                'groom_instagram' => '@daffarmdhn',
+                'groom_photo' => $groomPhoto,
+
+                'bride_full_name' => 'Clarissa Putri, S.I.Kom.',
+                'bride_nickname' => 'Caca',
+                'bride_parents' => 'Putri pertama Bpk. Rudi & Ibu Dewi',
+                'bride_instagram' => '@clarissaptr',
+                'bride_photo' => $bridePhoto,
+
+                // Ceremony & Reception
+                'ceremony_date' => '2026-12-25',
+                'wedding_ceremony_time' => '08:00 - 10:00 WIB',
+                'ceremony_venue_name' => 'Masjid Agung Al-Azhar',
+                'ceremony_venue_address' => 'Jl. Sisingamangaraja No. 1, Jakarta Selatan',
+                'ceremony_maps_url' => 'https://maps.google.com/?q=alazhar',
+
+                'reception_date' => '2026-12-25',
                 'wedding_venue_name' => 'Grand Ballroom Plataran',
                 'wedding_venue_address' => 'Jl. Sudirman Kav 21 Jakarta',
                 'wedding_maps_url' => 'https://maps.google.com/?q=plataran',
-                'wedding_ceremony_time' => '08:00 - 10:00 WIB',
                 'wedding_reception_time' => '11:00 - 14:00 WIB',
+
+                // Bank accounts
+                'bank_1_name' => 'BCA',
+                'bank_1_number' => '8020998812',
+                'bank_1_holder' => 'Clarissa Putri',
+                'bank_2_name' => 'Mandiri',
+                'bank_2_number' => '137001928382',
+                'bank_2_holder' => 'Daffa Ramadhan',
+                'gift_delivery_address' => 'Jl. Anggrek Ceria No. 12, Kebayoran Baru',
             ]
         );
 
@@ -359,6 +392,16 @@ class DigitalStoryTest extends TestCase
         $details = $story->wedding_details;
         $this->assertEquals('Grand Ballroom Plataran', $details['venue_name']);
         $this->assertEquals('08:00 - 10:00 WIB', $details['ceremony_time']);
+        $this->assertEquals('Daffa', $story->getGroomNickname());
+        $this->assertEquals('Caca', $story->getBrideNickname());
+        $this->assertEquals('Daffa Ramadhan, S.T.', $story->getGroomFullName());
+        $this->assertEquals('Clarissa Putri, S.I.Kom.', $story->getBrideFullName());
+        $this->assertNotNull($details['groom_photo']);
+        $this->assertNotNull($details['bride_photo']);
+        $this->assertStringContainsString('storage/stories/couples', $details['groom_photo']);
+        $this->assertStringContainsString('storage/stories/couples', $details['bride_photo']);
+        $this->assertEquals('8020998812', $details['bank_1_number']);
+        $this->assertEquals('137001928382', $details['bank_2_number']);
     }
 
     /**

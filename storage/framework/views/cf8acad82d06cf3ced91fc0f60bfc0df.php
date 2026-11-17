@@ -90,43 +90,49 @@
 
     $meta = is_array($story->metadata) ? $story->metadata : [];
 
-    $groomNickname = $meta['groom_nickname'] ?? 'Daffa';
-    $brideNickname = $meta['bride_nickname'] ?? 'Caca';
+    $groomNickname = $story->getGroomNickname();
+    $brideNickname = $story->getBrideNickname();
 
-    $groomFullName = $meta['groom_full_name'] ?? ($story->sender_name ?: 'Daffa Ramadhan, S.T.');
-    $groomParents = $meta['groom_parents'] ?? 'Putra bungsu dari Bpk. Bambang Tri & Ibu Nurhayati';
+    $groomFullName = $story->getGroomFullName();
+    $groomParents = $story->getGroomParents();
     $groomInstagram = $meta['groom_instagram'] ?? '@daffarmdhn';
     $groomBio = $meta['groom_bio'] ?? 'Pencinta kopi dan sosok paling sabar yang siap menemani setiap langkah bahagia.';
-    $groomPhoto = $meta['groom_photo'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+    $groomPhoto = $story->getGroomPhotoUrl();
 
-    $brideFullName = $meta['bride_full_name'] ?? ($story->recipient_name ?: 'Clarissa Putri, S.I.Kom.');
-    $brideParents = $meta['bride_parents'] ?? 'Putri pertama dari Bpk. Rudi Hartono & Ibu Dewi Anggraeni';
+    $brideFullName = $story->getBrideFullName();
+    $brideParents = $story->getBrideParents();
     $brideInstagram = $meta['bride_instagram'] ?? '@clarissaptr';
     $brideBio = $meta['bride_bio'] ?? 'Pecinta bunga manis, pencipta keceriaan, dan alasan utama Daffa tersenyum setiap hari.';
-    $bridePhoto = $meta['bride_photo'] ?? 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80';
+    $bridePhoto = $story->getBridePhotoUrl();
 
     $eventDate = $story->event_date ?? \Carbon\Carbon::now()->addDays(28)->setHour(9)->setMinute(0);
     $eventDateIso = $eventDate->toIso8601String();
     $eventFormattedDate = $eventDate->translatedFormat('l, d F Y');
 
-    $ceremonyTime = $meta['ceremony_time'] ?? '08.00 - 10.00 WIB';
-    $ceremonyVenue = $meta['venue_name'] ?? 'Garden Glasshouse Pastel Maja';
-    $ceremonyAddress = $meta['venue_address'] ?? 'Jl. Anggrek Ceria No. 12, Kebayoran Baru, Jakarta Selatan';
+    $ceremonyTime = $story->getCeremonyTime();
+    $ceremonyVenue = $story->getCeremonyVenue();
+    $ceremonyAddress = $story->getCeremonyAddress();
+    $ceremonyMapsUrl = $story->getCeremonyMapsUrl();
 
-    $receptionTime = $meta['reception_time'] ?? '11.00 - 14.00 WIB';
-    $receptionVenue = $meta['venue_name'] ?? 'Garden Glasshouse Pastel Maja';
-    $receptionAddress = $meta['venue_address'] ?? 'Jl. Anggrek Ceria No. 12, Kebayoran Baru, Jakarta Selatan';
-
-    $mapsUrl = $meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta';
+    $receptionTime = $story->getReceptionTime();
+    $receptionVenue = $story->getReceptionVenue();
+    $receptionAddress = $story->getReceptionAddress();
+    $receptionMapsUrl = $story->getReceptionMapsUrl();
 
     $audioTrack = $story->audio_url ?: ($story->audio_path ?: 'https://assets.mixkit.co/music/preview/mixkit-romantic-moment-1144.mp3');
     $audioTitle = $story->audio_title ?: 'Sweet Pastel Romance (Acoustic Joy)';
 
-    $bcaNumber = $meta['bank_bca_number'] ?? '8020 9988 12';
-    $bcaHolder = $meta['bank_bca_holder'] ?? 'Clarissa Putri';
-    $mandiriNumber = $meta['bank_mandiri_number'] ?? '137 00 1928 382';
-    $mandiriHolder = $meta['bank_mandiri_holder'] ?? 'Daffa Ramadhan';
+    $bcaName = $meta['bank_1_name'] ?? 'BCA';
+    $bcaNumber = $meta['bank_1_number'] ?? ($meta['bank_bca_number'] ?? '8020 9988 12');
+    $bcaHolder = $meta['bank_1_holder'] ?? ($meta['bank_bca_holder'] ?? 'Clarissa Putri');
+
+    $mandiriName = $meta['bank_2_name'] ?? 'Mandiri';
+    $mandiriNumber = $meta['bank_2_number'] ?? ($meta['bank_mandiri_number'] ?? '137 00 1928 382');
+    $mandiriHolder = $meta['bank_2_holder'] ?? ($meta['bank_mandiri_holder'] ?? 'Daffa Ramadhan');
+
     $giftAddress = $meta['gift_delivery_address'] ?? 'Jl. Anggrek Ceria No. 12, Kebayoran Baru, Jakarta Selatan (Penerima: Caca & Daffa)';
+    $holyVerse = $meta['holy_verse_text'] ?? 'Dan di antara tanda-tanda kebesaran-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.';
+    $holyVerseSource = $meta['holy_verse_source'] ?? '(QS. Ar-Rum: 21)';
 ?>
 
 <body
@@ -175,69 +181,71 @@
     <section
         x-ref="coverSection"
         x-show="isCoverVisible"
-        x-transition:leave="transition-all duration-1000 ease-in-out"
+        x-transition:leave="transition-all duration-700 ease-in-out transform"
         x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-full"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#FFF5F8] via-[#FFE3E8] to-[#FFF0F3]"
+        x-transition:leave-end="opacity-0 -translate-y-full pointer-events-none"
+        class="fixed inset-0 z-50 w-full min-h-screen min-h-[100dvh] h-full flex flex-col justify-between items-center text-center p-6 bg-gradient-to-b from-[#FFF5F8] via-[#FFE3E8] to-[#FFF0F3] overflow-hidden select-none"
     >
-        <div class="w-full max-w-[440px] bg-white/90 backdrop-blur-md rounded-[32px] border-2 border-[#FFD1DC] p-7 text-center shadow-2xl relative overflow-hidden">
-            
-            <div class="absolute -top-6 -right-6 text-5xl opacity-40 animate-float pointer-events-none">🌸</div>
-            <div class="absolute -bottom-6 -left-6 text-5xl opacity-40 animate-float pointer-events-none" style="animation-delay: 1.5s;">🧸</div>
-            <div class="absolute top-1/4 -left-4 text-3xl opacity-30 animate-pulse pointer-events-none">✨</div>
-            <div class="absolute bottom-1/3 -right-3 text-3xl opacity-30 animate-pulse pointer-events-none">💖</div>
+        
+        <div class="absolute -top-6 -right-6 text-6xl opacity-35 animate-float pointer-events-none">🌸</div>
+        <div class="absolute -bottom-6 -left-6 text-6xl opacity-35 animate-float pointer-events-none" style="animation-delay: 1.5s;">🧸</div>
+        <div class="absolute top-1/4 -left-4 text-4xl opacity-25 animate-pulse pointer-events-none">✨</div>
+        <div class="absolute bottom-1/3 -right-3 text-4xl opacity-25 animate-pulse pointer-events-none">💖</div>
 
-            
-            <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#FFF0F3] border border-[#FFCCD5] text-[#FF4D6D] font-cute-heading text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
+        
+        <div class="relative z-10 <?php echo e(isset($isDemo) && $isDemo ? 'pt-16 sm:pt-20' : 'pt-4 sm:pt-6'); ?>">
+            <div class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/95 border border-[#FFCCD5] text-[#FF4D6D] font-cute-heading text-xs font-bold uppercase tracking-wider shadow-sm">
                 <span>🌸</span>
                 <span>The Wedding Invitation</span>
                 <span>🌸</span>
             </div>
+        </div>
 
-            
-            <h1 class="font-script text-5xl sm:text-6xl text-[#FF4D6D] leading-none mb-1">
+        
+        <div class="relative z-10 my-auto py-6 space-y-2 max-w-sm w-full">
+            <div class="w-16 h-16 mx-auto rounded-full bg-white/95 border-2 border-[#FFD1DC] shadow-md flex items-center justify-center text-2xl text-[#FF4D6D] mb-2">
+                💍
+            </div>
+            <h1 class="font-script text-5xl sm:text-6xl text-[#FF4D6D] leading-tight">
                 <?php echo e($groomNickname); ?> & <?php echo e($brideNickname); ?>
 
             </h1>
-            <p class="font-cute-heading text-xs text-[#7A5C61] tracking-widest uppercase font-semibold mb-6">
+            <p class="font-cute-heading text-xs text-[#7A5C61] tracking-widest uppercase font-semibold">
                 Kami Akan Menikah!
             </p>
+            <p class="font-cute-heading text-[11px] text-[#A88B92] tracking-wider">
+                <?php echo e($eventFormattedDate); ?>
 
-            
-            <div class="relative w-44 h-44 mx-auto mb-6">
-                <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-16 h-5 bg-[#FFE4B5]/80 rotate-2 rounded-xs shadow-xs z-10"></div>
-                <div class="w-full h-full bg-white p-2.5 rounded-2xl shadow-lg border-2 border-[#FFD1DC] rotate-[-2deg] transition hover:rotate-0 duration-300">
-                    <img
-                        src="<?php echo e($bridePhoto); ?>"
-                        alt="Mempelai"
-                        class="w-full h-full object-cover rounded-xl"
-                    >
-                </div>
-            </div>
+            </p>
+        </div>
 
-            
-            <div class="bg-[#FFF5F8] border border-[#FFCCD5] rounded-2xl p-3.5 mb-6 shadow-inner">
-                <p class="font-cute-heading text-[11px] text-[#7A5C61] uppercase tracking-wider font-semibold mb-0.5">
+        
+        <div class="relative z-10 w-full max-w-sm pb-6 sm:pb-8 space-y-3.5">
+            <div class="bg-white/95 border-2 border-[#FFCCD5] rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+                <p class="font-cute-heading text-[11px] text-[#7A5C61] uppercase tracking-wider font-semibold mb-1">
                     Kepada Yth. Sahabat Tercinta:
                 </p>
-                <p class="font-cute-heading text-base font-bold text-[#FF4D6D] truncate">
+                <p class="font-cute-heading text-lg sm:text-xl font-bold text-[#FF4D6D] truncate">
                     <?php echo e($displayGuest); ?>
 
                 </p>
+                <span class="font-cute-heading text-[11px] text-[#7A5C61] block mt-0.5">
+                    di Tempat
+                </span>
             </div>
 
             
             <button
                 type="button"
                 @click="openInvitation()"
-                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#FF4D6D] via-[#FF758F] to-[#FF4D6D] text-white font-cute-heading text-sm font-bold shadow-lg shadow-[#FF4D6D]/35 hover:scale-102 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#FF4D6D] via-[#FF758F] to-[#FF4D6D] text-white font-cute-heading text-sm font-bold shadow-xl shadow-[#FF4D6D]/35 hover:scale-102 active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
             >
-                <span class="animate-heart text-base">💌</span>
+                <span class="animate-heart text-lg">💌</span>
                 <span>Buka Undangan Ceria</span>
-                <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1.5 transition-transform"></i>
             </button>
 
-            <p class="font-cute-heading text-[10px] text-[#A88B92] mt-3">
+            <p class="font-cute-heading text-[11px] text-[#7A5C61]">
                 *Ketuk tombol untuk membuka undangan & memutar alunan musik
             </p>
         </div>
@@ -249,6 +257,7 @@
     <main
         id="mainContainer"
         class="max-w-[480px] mx-auto min-h-screen bg-[#FFF5F8] <?php echo e(request()->has('embed') ? '' : 'shadow-2xl border-x-2 border-[#FFCCD5]/60'); ?> relative overflow-hidden pb-24"
+        :class="{ 'h-screen max-h-screen overflow-hidden pointer-events-none': isCoverVisible }"
     >
         
         <div
@@ -342,10 +351,11 @@
             
             <div class="bg-white/80 border border-[#FFCCD5] rounded-2xl p-5 shadow-xs max-w-sm mx-auto">
                 <p class="font-cute-heading text-xs italic text-[#7A5C61] leading-relaxed">
-                    "Dan di antara tanda-tanda kebesaran-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang."
+                    "<?php echo e($holyVerse); ?>"
                 </p>
                 <p class="font-cute-heading text-[11px] font-bold text-[#FF4D6D] mt-2">
-                    (QS. Ar-Rum: 21)
+                    <?php echo e($holyVerseSource); ?>
+
                 </p>
             </div>
         </section>
@@ -473,7 +483,7 @@
                     <p class="text-[11px] text-[#7A5C61] pl-4"><?php echo e($ceremonyAddress); ?></p>
                 </div>
                 <a
-                    href="<?php echo e($mapsUrl); ?>"
+                    href="<?php echo e($ceremonyMapsUrl); ?>"
                     target="_blank"
                     class="w-full py-2.5 px-4 rounded-xl bg-[#FF4D6D] text-white font-cute-heading text-xs font-bold shadow-xs hover:bg-[#e03b5a] transition flex items-center justify-center gap-1.5"
                 >
@@ -495,7 +505,7 @@
                     <p class="text-[11px] text-[#7A5C61] pl-4"><?php echo e($receptionAddress); ?></p>
                 </div>
                 <a
-                    href="<?php echo e($mapsUrl); ?>"
+                    href="<?php echo e($receptionMapsUrl); ?>"
                     target="_blank"
                     class="w-full py-2.5 px-4 rounded-xl bg-[#FF4D6D] text-white font-cute-heading text-xs font-bold shadow-xs hover:bg-[#e03b5a] transition flex items-center justify-center gap-1.5"
                 >
@@ -554,14 +564,14 @@
             
             <div class="bg-gradient-to-r from-[#FFF0F3] to-[#FFE3E8] border-2 border-[#FFCCD5] rounded-3xl p-5 shadow-sm space-y-2 relative overflow-hidden">
                 <div class="flex items-center justify-between">
-                    <span class="font-cute-heading text-xs font-bold text-[#FF4D6D] uppercase tracking-wider">Bank BCA</span>
+                    <span class="font-cute-heading text-xs font-bold text-[#FF4D6D] uppercase tracking-wider"><?php echo e($bcaName); ?></span>
                     <i class="fa-solid fa-credit-card text-[#FF4D6D] text-lg"></i>
                 </div>
                 <p class="font-mono text-base font-bold text-[#3D2A2E] tracking-wider"><?php echo e($bcaNumber); ?></p>
                 <p class="font-cute-heading text-xs text-[#7A5C61]">a.n <?php echo e($bcaHolder); ?></p>
                 <button
                     type="button"
-                    @click="copyText('<?php echo e($bcaNumber); ?>', 'Nomor rekening BCA berhasil disalin!')"
+                    @click="copyText('<?php echo e($bcaNumber); ?>', 'Nomor rekening <?php echo e($bcaName); ?> berhasil disalin!')"
                     class="w-full py-2 rounded-xl bg-white text-[#FF4D6D] border border-[#FFCCD5] font-cute-heading text-xs font-bold hover:bg-[#FFF0F3] transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                     <i class="fa-regular fa-copy"></i>
@@ -572,14 +582,14 @@
             
             <div class="bg-gradient-to-r from-[#FFF5F8] to-[#FFEBEF] border-2 border-[#FFCCD5] rounded-3xl p-5 shadow-sm space-y-2 relative overflow-hidden">
                 <div class="flex items-center justify-between">
-                    <span class="font-cute-heading text-xs font-bold text-[#FF4D6D] uppercase tracking-wider">Bank Mandiri</span>
+                    <span class="font-cute-heading text-xs font-bold text-[#FF4D6D] uppercase tracking-wider"><?php echo e($mandiriName); ?></span>
                     <i class="fa-solid fa-wallet text-[#FF4D6D] text-lg"></i>
                 </div>
                 <p class="font-mono text-base font-bold text-[#3D2A2E] tracking-wider"><?php echo e($mandiriNumber); ?></p>
                 <p class="font-cute-heading text-xs text-[#7A5C61]">a.n <?php echo e($mandiriHolder); ?></p>
                 <button
                     type="button"
-                    @click="copyText('<?php echo e($mandiriNumber); ?>', 'Nomor rekening Mandiri berhasil disalin!')"
+                    @click="copyText('<?php echo e($mandiriNumber); ?>', 'Nomor rekening <?php echo e($mandiriName); ?> berhasil disalin!')"
                     class="w-full py-2 rounded-xl bg-white text-[#FF4D6D] border border-[#FFCCD5] font-cute-heading text-xs font-bold hover:bg-[#FFF0F3] transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                     <i class="fa-regular fa-copy"></i>

@@ -76,42 +76,48 @@
 
     $meta = is_array($story->metadata) ? $story->metadata : [];
 
-    $groomNickname = $meta['groom_nickname'] ?? 'Arya';
-    $brideNickname = $meta['bride_nickname'] ?? 'Dyah';
+    $groomNickname = $story->getGroomNickname();
+    $brideNickname = $story->getBrideNickname();
 
-    $groomFullName = $meta['groom_full_name'] ?? ($story->sender_name ?: 'Raden Arya Kusuma, S.H.');
-    $groomParents = $meta['groom_parents'] ?? 'Putra pertama dari Bpk. Ir. H. Bambang Kusuma & Ibu Hj. Ratna Sari';
+    $groomFullName = $story->getGroomFullName();
+    $groomParents = $story->getGroomParents();
     $groomInstagram = $meta['groom_instagram'] ?? '@aryakusuma';
     $groomBio = $meta['groom_bio'] ?? 'Pribadi bersahaja, pelindung keluarga, dan sosok pemimpin bijaksana.';
-    $groomPhoto = $meta['groom_photo'] ?? 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80';
+    $groomPhoto = $story->getGroomPhotoUrl();
 
-    $brideFullName = $meta['bride_full_name'] ?? ($story->recipient_name ?: 'Dyah Sekar Ayu, S.Psi.');
-    $brideParents = $meta['bride_parents'] ?? 'Putri bungsu dari Bpk. H. Suryo Pranoto & Ibu Hj. Siti Rohmah';
+    $brideFullName = $story->getBrideFullName();
+    $brideParents = $story->getBrideParents();
     $brideInstagram = $meta['bride_instagram'] ?? '@dyahayusekar';
     $brideBio = $meta['bride_bio'] ?? 'Lemah lembut, anggun, dan senantiasa menyejukkan hati di setiap suasana.';
-    $bridePhoto = $meta['bride_photo'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+    $bridePhoto = $story->getBridePhotoUrl();
 
     $eventDate = $story->event_date ?? \Carbon\Carbon::now()->addDays(28)->setHour(9)->setMinute(0);
     $eventDateIso = $eventDate->toIso8601String();
     $eventFormattedDate = $eventDate->translatedFormat('l, d F Y');
 
-    $ceremonyTime = $meta['ceremony_time'] ?? '08.30 - 10.30 WIB';
-    $ceremonyVenue = $meta['venue_name'] ?? 'Pendopo Heritage Grand Ballroom Maja';
-    $ceremonyAddress = $meta['venue_address'] ?? 'Jl. Cendana Asri No. 8, Kebayoran Baru, Jakarta Selatan';
+    $ceremonyTime = $story->getCeremonyTime();
+    $ceremonyVenue = $story->getCeremonyVenue();
+    $ceremonyAddress = $story->getCeremonyAddress();
+    $ceremonyMapsUrl = $story->getCeremonyMapsUrl();
 
-    $receptionTime = $meta['reception_time'] ?? '11.30 - 15.00 WIB';
-    $receptionVenue = $meta['venue_name'] ?? 'Pendopo Heritage Grand Ballroom Maja';
-    $receptionAddress = $meta['venue_address'] ?? 'Jl. Cendana Asri No. 8, Kebayoran Baru, Jakarta Selatan';
-
-    $mapsUrl = $meta['maps_url'] ?? 'https://maps.google.com/?q=Jakarta';
+    $receptionTime = $story->getReceptionTime();
+    $receptionVenue = $story->getReceptionVenue();
+    $receptionAddress = $story->getReceptionAddress();
+    $receptionMapsUrl = $story->getReceptionMapsUrl();
 
     $audioTrack = $story->audio_url ?: ($story->audio_path ?: 'https://assets.mixkit.co/music/preview/mixkit-wedding-acoustic-guitar-384.mp3');
     $audioTitle = $story->audio_title ?: 'Canon in D (Classical Heritage Strings)';
 
-    $bcaNumber = $meta['bank_bca_number'] ?? '8020 7766 55';
-    $bcaHolder = $meta['bank_bca_holder'] ?? 'Raden Arya Kusuma';
-    $mandiriNumber = $meta['bank_mandiri_number'] ?? '137 00 8877 665';
-    $mandiriHolder = $meta['bank_mandiri_holder'] ?? 'Dyah Sekar Ayu';
+    $bcaName = $meta['bank_1_name'] ?? 'BCA';
+    $bcaNumber = $meta['bank_1_number'] ?? ($meta['bank_bca_number'] ?? '8020 7766 55');
+    $bcaHolder = $meta['bank_1_holder'] ?? ($meta['bank_bca_holder'] ?? 'Raden Arya Kusuma');
+
+    $mandiriName = $meta['bank_2_name'] ?? 'Mandiri';
+    $mandiriNumber = $meta['bank_2_number'] ?? ($meta['bank_mandiri_number'] ?? '137 00 8877 665');
+    $mandiriHolder = $meta['bank_2_holder'] ?? ($meta['bank_mandiri_holder'] ?? 'Dyah Sekar Ayu');
+
+    $holyVerse = $meta['holy_verse_text'] ?? 'Dan di antara tanda-tanda kebesaran-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.';
+    $holyVerseSource = $meta['holy_verse_source'] ?? '— QS. Ar-Rum: 21 —';
 @endphp
 
 <body
@@ -149,68 +155,73 @@
     </div>
 
     {{-- ======================================================== --}}
-    {{-- 1. FULLSCREEN OPENING COVER (Classic Wax Seal & Frame)   --}}
+    {{-- 1. FULLSCREEN OPENING COVER (Full Edge-to-Edge, No Photo) --}}
     {{-- ======================================================== --}}
     <section
         x-ref="coverSection"
         x-show="isCoverVisible"
-        x-transition:leave="transition-all duration-1000 ease-in-out"
+        x-transition:leave="transition-all duration-700 ease-in-out transform"
         x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-full"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#1E231D] via-[#2A3029] to-[#1E231D]"
+        x-transition:leave-end="opacity-0 -translate-y-full pointer-events-none"
+        class="fixed inset-0 z-50 w-full min-h-screen min-h-[100dvh] h-full flex flex-col justify-between items-center text-center p-6 bg-gradient-to-b from-[#1E231D] via-[#2A3029] to-[#1E231D] overflow-hidden select-none"
     >
-        <div class="w-full max-w-[440px] bg-[#FAF6EE] rounded-3xl border-2 border-[#8C6D46]/40 p-7 text-center shadow-2xl relative overflow-hidden">
-            {{-- Botanical border corners --}}
-            <div class="absolute top-2 left-2 text-[#8C6D46]/30 text-xl font-classic-heading">❦</div>
-            <div class="absolute top-2 right-2 text-[#8C6D46]/30 text-xl font-classic-heading">❧</div>
-            <div class="absolute bottom-2 left-2 text-[#8C6D46]/30 text-xl font-classic-heading">❧</div>
-            <div class="absolute bottom-2 right-2 text-[#8C6D46]/30 text-xl font-classic-heading">❦</div>
+        {{-- Botanical ambient corners --}}
+        <div class="absolute top-4 left-4 text-[#8C6D46]/40 text-2xl font-classic-heading pointer-events-none">❦</div>
+        <div class="absolute top-4 right-4 text-[#8C6D46]/40 text-2xl font-classic-heading pointer-events-none">❧</div>
+        <div class="absolute bottom-4 left-4 text-[#8C6D46]/40 text-2xl font-classic-heading pointer-events-none">❧</div>
+        <div class="absolute bottom-4 right-4 text-[#8C6D46]/40 text-2xl font-classic-heading pointer-events-none">❦</div>
 
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F4EFE6] border border-[#8C6D46]/30 text-[#8C6D46] font-classic-heading text-xs uppercase tracking-widest mb-4">
+        {{-- Top Badge --}}
+        <div class="relative z-10 {{ isset($isDemo) && $isDemo ? 'pt-16 sm:pt-20' : 'pt-4 sm:pt-6' }}">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FAF6EE]/10 border border-[#8C6D46]/40 text-[#D4AF37] font-classic-heading text-xs uppercase tracking-widest shadow-sm">
                 <span>🌿</span>
                 <span>The Wedding of</span>
                 <span>🌿</span>
             </div>
+        </div>
 
-            <h1 class="font-cursive text-5xl sm:text-6xl text-[#634832] leading-tight mb-1">
+        {{-- Couple Names (Centered, Classic Calligraphy) --}}
+        <div class="relative z-10 my-auto py-6 space-y-2 max-w-sm w-full">
+            <div class="w-16 h-16 mx-auto rounded-full bg-[#FAF6EE]/10 border-2 border-[#8C6D46]/60 shadow-md flex items-center justify-center text-2xl text-[#D4AF37] mb-2 font-classic-heading font-bold">
+                ❦
+            </div>
+            <h1 class="font-cursive text-5xl sm:text-6xl text-[#F4EFE6] leading-tight">
                 {{ $groomNickname }} & {{ $brideNickname }}
             </h1>
-            <p class="font-classic-heading text-xs text-[#6B5A4B] uppercase tracking-widest font-semibold mb-6">
+            <p class="font-classic-heading text-xs text-[#C5B498] uppercase tracking-widest font-semibold">
                 Undangan Pernikahan Klasik
             </p>
+            <p class="font-classic-heading text-xs text-[#8C6D46] tracking-wider italic">
+                {{ $eventFormattedDate }}
+            </p>
+        </div>
 
-            {{-- Oval Portrait Frame --}}
-            <div class="relative w-40 h-48 mx-auto mb-6">
-                <div class="w-full h-full rounded-[9999px] overflow-hidden border-4 border-[#8C6D46]/50 shadow-md p-1 bg-[#FAF6EE]">
-                    <img src="{{ $groomPhoto }}" alt="Mempelai" class="w-full h-full object-cover rounded-[9999px] filter sepia-[0.15]">
-                </div>
-                <div class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#8C6D46] text-[#FAF6EE] flex items-center justify-center text-xs font-classic-heading font-bold shadow-md">
-                    ❦
-                </div>
-            </div>
-
-            {{-- Guest Name Box --}}
-            <div class="bg-[#F4EFE6] border border-[#8C6D46]/30 rounded-2xl p-4 mb-6">
+        {{-- Personal Guest Box & Buka Undangan Button (NO PHOTO as requested) --}}
+        <div class="relative z-10 w-full max-w-sm pb-6 sm:pb-8 space-y-3.5">
+            <div class="bg-[#FAF6EE]/95 border-2 border-[#8C6D46]/50 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
                 <p class="font-classic-heading text-xs text-[#6B5A4B] uppercase tracking-widest mb-1">
                     Kepada Yth. Bapak/Ibu/Saudara/i:
                 </p>
-                <p class="font-classic-heading text-lg font-bold text-[#2C2117] truncate">
+                <p class="font-classic-heading text-lg sm:text-xl font-bold text-[#2C2117] truncate">
                     {{ $displayGuest }}
                 </p>
+                <span class="font-classic-heading text-xs text-[#8C6D46] block mt-0.5">
+                    di Tempat
+                </span>
             </div>
 
             {{-- Buka Undangan Button (Wax Seal Style) --}}
             <button
                 type="button"
                 @click="openInvitation()"
-                class="w-full py-3.5 px-6 rounded-2xl bg-[#8C6D46] hover:bg-[#725736] text-[#FAF6EE] font-classic-heading text-sm font-bold uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                class="w-full py-4 px-6 rounded-2xl bg-[#8C6D46] hover:bg-[#725736] text-[#FAF6EE] font-classic-heading text-sm font-bold uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
                 <span class="text-base">📜</span>
                 <span>Buka Undangan</span>
                 <span class="text-xs">❦</span>
             </button>
 
-            <p class="font-classic-heading text-[11px] text-[#8C6D46] mt-3 italic">
+            <p class="font-classic-heading text-[11px] text-[#A3B899] italic">
                 *Ketuk untuk membuka lembaran undangan & melantunkan melodi
             </p>
         </div>
@@ -218,6 +229,12 @@
 
     {{-- ======================================================== --}}
     {{-- 2. MAIN MOBILE-FIRST CONTAINER (Max-W 480px, Centered)  --}}
+    {{-- ======================================================== --}}
+    <main
+        id="mainContainer"
+        class="max-w-[480px] mx-auto min-h-screen bg-parchment {{ request()->has('embed') ? '' : 'shadow-2xl border-x-2 border-[#8C6D46]/20' }} relative overflow-hidden pb-24"
+        :class="{ 'h-screen max-h-screen overflow-hidden pointer-events-none': isCoverVisible }"
+    >
     {{-- ======================================================== --}}
     <main
         id="mainContainer"
